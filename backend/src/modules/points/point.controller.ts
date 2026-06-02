@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { sendResponse } from "../../shared/utils/response";
 import { pointService } from "./point.service";
+import { sendResponse } from "../../shared/utils/response";
 
 export const pointController = {
   refreshPointsTable: async (req: Request, res: Response) => {

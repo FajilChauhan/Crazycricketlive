@@ -1,31 +1,118 @@
 import { pool } from "../../config/dbconfig";
+import { ApiError } from "../../utils/ApiError";
 import { CreateTournamentBody, UpdateTournamentBody } from "./tournament.types";
+
+type TournamentRow = {
+  tournament_id: string;
+  tournament_name: string;
+  organization_name: string;
+  created_by_user_id: string;
+  status: "draft" | "active" | "completed" | "archived";
+  start_date: string | null;
+  end_date: string | null;
+  created_at: Date;
+  updated_at: Date;
+};
+
+type TournamentWithCreatorRow = TournamentRow & {
+  created_by_username: string;
+};
+
+type TeamRow = {
+  team_id: string;
+  tournament_id: string;
+  team_name: string;
+  team_logo: string | null;
+  created_by_user_id: string;
+  created_at: Date;
+};
+
+type MatchRow = {
+  match_id: string;
+  tournament_id: string;
+  team1_id: string;
+  team2_id: string;
+  ground_name: string;
+  match_type: string;
+  overs: number;
+  match_no: number;
+  status: string;
+  toss_winner_team_id: string | null;
+  toss_decision: "bat" | "bowl" | null;
+  first_batting_team_id: string | null;
+  winner_team_id: string | null;
+  scheduled_start_at: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  created_at: Date;
+  team1_name?: string;
+  team2_name?: string;
+  toss_winner_team_name?: string | null;
+  first_batting_team_name?: string | null;
+  winner_team_name?: string | null;
+};
+
+type PointsRow = {
+  points_table_id: string;
+  tournament_id: string;
+  team_id: string;
+  team_name: string;
+  matches_played: number;
+  wins: number;
+  losses: number;
+  ties: number;
+  no_results: number;
+  points: number;
+  net_run_rate: number;
+  updated_at: Date;
+};
+
+async function ensureTournamentOwner(tournamentId: string, userId: string) {
+  const result = await pool.query(
+    `SELECT tournament_id
+     FROM tournaments
+     WHERE tournament_id = $1
+       AND created_by_user_id = $2
+     LIMIT 1`,
+    [tournamentId, userId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new ApiError(403, "Tournament not found or you are not authorized");
+  }
+}
 
 export const tournamentService = {
   createTournament: async (userId: string, body: CreateTournamentBody) => {
-    const { tournamentName, organizationName, startDate, endDate, status } = body;
+    const tournamentName = body.tournamentName.trim();
+    const organizationName = body.organizationName.trim();
+    const startDate = body.startDate ?? null;
+    const endDate = body.endDate ?? null;
+    const status = body.status ?? "draft";
 
-    const result = await pool.query(
+    const result = await pool.query<TournamentRow>(
       `INSERT INTO tournaments
        (tournament_name, organization_name, created_by_user_id, start_date, end_date, status)
        VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [
-        tournamentName,
-        organizationName,
-        userId,
-        startDate || null,
-        endDate || null,
-        status || "draft",
-      ]
+       RETURNING tournament_id, tournament_name, organization_name, created_by_user_id, status, start_date, end_date, created_at, updated_at`,
+      [tournamentName, organizationName, userId, startDate, endDate, status]
     );
 
     return result.rows[0];
   },
 
   getAllTournaments: async () => {
-    const result = await pool.query(
-      `SELECT t.*, u.username AS created_by_username
+    const result = await pool.query<TournamentWithCreatorRow>(
+      `SELECT t.tournament_id,
+              t.tournament_name,
+              t.organization_name,
+              t.created_by_user_id,
+              t.status,
+              t.start_date,
+              t.end_date,
+              t.created_at,
+              t.updated_at,
+              u.username AS created_by_username
        FROM tournaments t
        JOIN users u ON t.created_by_user_id = u.user_id
        ORDER BY t.created_at DESC`
@@ -35,8 +122,16 @@ export const tournamentService = {
   },
 
   getMyTournaments: async (userId: string) => {
-    const result = await pool.query(
-      `SELECT *
+    const result = await pool.query<TournamentRow>(
+      `SELECT tournament_id,
+              tournament_name,
+              organization_name,
+              created_by_user_id,
+              status,
+              start_date,
+              end_date,
+              created_at,
+              updated_at
        FROM tournaments
        WHERE created_by_user_id = $1
        ORDER BY created_at DESC`,
@@ -47,44 +142,97 @@ export const tournamentService = {
   },
 
   getTournamentById: async (tournamentId: string) => {
-    const tournamentResult = await pool.query(
-      `SELECT t.*, u.username AS created_by_username
-       FROM tournaments t
-       JOIN users u ON t.created_by_user_id = u.user_id
-       WHERE t.tournament_id = $1`,
-      [tournamentId]
-    );
+    const [tournamentResult, teamsResult, matchesResult, pointsResult] =
+      await Promise.all([
+        pool.query<TournamentWithCreatorRow>(
+          `SELECT t.tournament_id,
+                  t.tournament_name,
+                  t.organization_name,
+                  t.created_by_user_id,
+                  t.status,
+                  t.start_date,
+                  t.end_date,
+                  t.created_at,
+                  t.updated_at,
+                  u.username AS created_by_username
+           FROM tournaments t
+           JOIN users u ON t.created_by_user_id = u.user_id
+           WHERE t.tournament_id = $1
+           LIMIT 1`,
+          [tournamentId]
+        ),
+
+        pool.query<TeamRow>(
+          `SELECT team_id,
+                  tournament_id,
+                  team_name,
+                  team_logo,
+                  created_by_user_id,
+                  created_at
+           FROM teams
+           WHERE tournament_id = $1
+           ORDER BY created_at ASC`,
+          [tournamentId]
+        ),
+
+        pool.query<MatchRow>(
+          `SELECT m.match_id,
+                  m.tournament_id,
+                  m.team1_id,
+                  m.team2_id,
+                  m.ground_name,
+                  m.match_type,
+                  m.overs,
+                  m.match_no,
+                  m.status,
+                  m.toss_winner_team_id,
+                  m.toss_decision,
+                  m.first_batting_team_id,
+                  m.winner_team_id,
+                  m.scheduled_start_at,
+                  m.started_at,
+                  m.ended_at,
+                  m.created_at,
+                  t1.team_name AS team1_name,
+                  t2.team_name AS team2_name,
+                  tw.team_name AS toss_winner_team_name,
+                  fb.team_name AS first_batting_team_name,
+                  wn.team_name AS winner_team_name
+           FROM matches m
+           JOIN teams t1 ON m.team1_id = t1.team_id
+           JOIN teams t2 ON m.team2_id = t2.team_id
+           LEFT JOIN teams tw ON m.toss_winner_team_id = tw.team_id
+           LEFT JOIN teams fb ON m.first_batting_team_id = fb.team_id
+           LEFT JOIN teams wn ON m.winner_team_id = wn.team_id
+           WHERE m.tournament_id = $1
+           ORDER BY m.match_no ASC, m.created_at ASC`,
+          [tournamentId]
+        ),
+
+        pool.query<PointsRow>(
+          `SELECT pt.points_table_id,
+                  pt.tournament_id,
+                  pt.team_id,
+                  tm.team_name,
+                  pt.matches_played,
+                  pt.wins,
+                  pt.losses,
+                  pt.ties,
+                  pt.no_results,
+                  pt.points,
+                  pt.net_run_rate,
+                  pt.updated_at
+           FROM points_table pt
+           JOIN teams tm ON pt.team_id = tm.team_id
+           WHERE pt.tournament_id = $1
+           ORDER BY pt.points DESC, pt.net_run_rate DESC, tm.team_name ASC`,
+          [tournamentId]
+        ),
+      ]);
 
     if (tournamentResult.rows.length === 0) {
-      throw new Error("Tournament not found");
+      throw new ApiError(404, "Tournament not found");
     }
-
-    const teamsResult = await pool.query(
-      `SELECT team_id, team_name, team_logo, created_by_user_id, created_at
-       FROM teams
-       WHERE tournament_id = $1
-       ORDER BY created_at ASC`,
-      [tournamentId]
-    );
-
-    const matchesResult = await pool.query(
-      `SELECT match_id, tournament_id, team1_id, team2_id, ground_name, match_type, overs, match_no, status,
-              toss_winner_team_id, toss_decision, first_batting_team_id, winner_team_id,
-              scheduled_start_at, started_at, ended_at, created_at
-       FROM matches
-       WHERE tournament_id = $1
-       ORDER BY match_no ASC, created_at ASC`,
-      [tournamentId]
-    );
-
-    const pointsResult = await pool.query(
-      `SELECT pt.*, tm.team_name
-       FROM points_table pt
-       JOIN teams tm ON pt.team_id = tm.team_id
-       WHERE pt.tournament_id = $1
-       ORDER BY pt.points DESC, pt.net_run_rate DESC`,
-      [tournamentId]
-    );
 
     return {
       tournament: tournamentResult.rows[0],
@@ -99,16 +247,7 @@ export const tournamentService = {
     userId: string,
     body: UpdateTournamentBody
   ) => {
-    const ownershipCheck = await pool.query(
-      `SELECT tournament_id
-       FROM tournaments
-       WHERE tournament_id = $1 AND created_by_user_id = $2`,
-      [tournamentId, userId]
-    );
-
-    if (ownershipCheck.rows.length === 0) {
-      throw new Error("Tournament not found or you are not authorized");
-    }
+    await ensureTournamentOwner(tournamentId, userId);
 
     const fields: string[] = [];
     const values: any[] = [];
@@ -116,12 +255,12 @@ export const tournamentService = {
 
     if (body.tournamentName !== undefined) {
       fields.push(`tournament_name = $${index++}`);
-      values.push(body.tournamentName);
+      values.push(body.tournamentName.trim());
     }
 
     if (body.organizationName !== undefined) {
       fields.push(`organization_name = $${index++}`);
-      values.push(body.organizationName);
+      values.push(body.organizationName.trim());
     }
 
     if (body.startDate !== undefined) {
@@ -140,36 +279,39 @@ export const tournamentService = {
     }
 
     if (fields.length === 0) {
-      throw new Error("No fields to update");
+      throw new ApiError(400, "No fields to update");
     }
 
     values.push(tournamentId);
 
-    const query = `
-      UPDATE tournaments
-      SET ${fields.join(", ")}
-      WHERE tournament_id = $${index}
-      RETURNING *;
-    `;
+    const result = await pool.query<TournamentRow>(
+      `UPDATE tournaments
+       SET ${fields.join(", ")}
+       WHERE tournament_id = $${index}
+       RETURNING tournament_id, tournament_name, organization_name, created_by_user_id, status, start_date, end_date, created_at, updated_at`,
+      values
+    );
 
-    const result = await pool.query(query, values);
+    if (result.rows.length === 0) {
+      throw new ApiError(404, "Tournament not found");
+    }
 
     return result.rows[0];
   },
 
   deleteTournament: async (tournamentId: string, userId: string) => {
-    const ownershipCheck = await pool.query(
-      `SELECT tournament_id
-       FROM tournaments
-       WHERE tournament_id = $1 AND created_by_user_id = $2`,
-      [tournamentId, userId]
+    await ensureTournamentOwner(tournamentId, userId);
+
+    const result = await pool.query(
+      `DELETE FROM tournaments
+       WHERE tournament_id = $1
+       RETURNING tournament_id`,
+      [tournamentId]
     );
 
-    if (ownershipCheck.rows.length === 0) {
-      throw new Error("Tournament not found or you are not authorized");
+    if (result.rows.length === 0) {
+      throw new ApiError(404, "Tournament not found");
     }
-
-    await pool.query(`DELETE FROM tournaments WHERE tournament_id = $1`, [tournamentId]);
 
     return { message: "Tournament deleted successfully" };
   },

@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+
 import authRoutes from "./modules/auth/auth.route";
 import tournamentRoutes from "./modules/tournaments/tournament.route";
 import teamRoutes from "./modules/teams/team.route";
@@ -10,6 +11,7 @@ import pointRoutes from "./modules/points/point.route";
 import dashboardRoutes from "./modules/dashboard/dashboard.route";
 import profileRoutes from "./modules/profile/profile.route";
 import searchRoutes from "./modules/search/search.route";
+import { errorHandler } from "./middlewares/error.middleware";
 
 const app = express();
 
@@ -31,5 +33,7 @@ app.use("/api/search", searchRoutes);
 app.get("/", (req, res) => {
   res.send("Cricket Live API is running");
 });
+
+app.use(errorHandler);
 
 export default app;

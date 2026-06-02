@@ -1,54 +1,130 @@
 import { pool } from "../../config/dbconfig";
+import { ApiError } from "../../utils/ApiError";
 import { CreateTeamBody, UpdateTeamBody } from "./team.types";
+
+type TeamRow = {
+  team_id: string;
+  tournament_id: string;
+  team_name: string;
+  team_logo: string | null;
+  created_by_user_id: string;
+  created_at: Date;
+  updated_at: Date;
+};
+
+type TeamMemberRow = {
+  team_member_id: string;
+  team_id: string;
+  user_id: string;
+  role: string;
+  is_captain: boolean;
+  jersey_number: number | null;
+  joined_at: Date;
+  username: string;
+  email: string;
+  profile_image: string | null;
+};
+
+async function ensureTeamOwner(teamId: string, userId: string) {
+  const result = await pool.query(
+    `SELECT team_id
+     FROM teams
+     WHERE team_id = $1
+       AND created_by_user_id = $2
+     LIMIT 1`,
+    [teamId, userId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new ApiError(403, "Team not found or you are not authorized");
+  }
+}
+
+async function ensureTournamentOwner(tournamentId: string, userId: string) {
+  const result = await pool.query(
+    `SELECT tournament_id
+     FROM tournaments
+     WHERE tournament_id = $1
+       AND created_by_user_id = $2
+     LIMIT 1`,
+    [tournamentId, userId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new ApiError(403, "Tournament not found or you are not authorized");
+  }
+}
 
 export const teamService = {
   createTeam: async (userId: string, body: CreateTeamBody) => {
-    const { tournamentId, teamName, teamLogo } = body;
+    const tournamentId = body.tournamentId;
+    const teamName = body.teamName.trim();
+    const teamLogo = body.teamLogo ?? null;
 
-    const tournamentCheck = await pool.query(
-      `SELECT tournament_id
-       FROM tournaments
-       WHERE tournament_id = $1 AND created_by_user_id = $2`,
-      [tournamentId, userId]
-    );
+    await ensureTournamentOwner(tournamentId, userId);
 
-    if (tournamentCheck.rows.length === 0) {
-      throw new Error("Tournament not found or you are not authorized");
+    try {
+      const result = await pool.query<TeamRow>(
+        `INSERT INTO teams (tournament_id, team_name, team_logo, created_by_user_id)
+         VALUES ($1, $2, $3, $4)
+         RETURNING team_id, tournament_id, team_name, team_logo, created_by_user_id, created_at, updated_at`,
+        [tournamentId, teamName, teamLogo, userId]
+      );
+
+      return result.rows[0];
+    } catch (error: any) {
+      if (error?.code === "23505") {
+        throw new ApiError(
+          409,
+          "Team name already exists in this tournament"
+        );
+      }
+
+      throw error;
     }
-
-    const result = await pool.query(
-      `INSERT INTO teams (tournament_id, team_name, team_logo, created_by_user_id)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
-      [tournamentId, teamName, teamLogo || null, userId]
-    );
-
-    return result.rows[0];
   },
 
   getTeamById: async (teamId: string) => {
-    const teamResult = await pool.query(
-      `SELECT t.*, u.username AS created_by_username, tr.tournament_name
-       FROM teams t
-       JOIN users u ON t.created_by_user_id = u.user_id
-       JOIN tournaments tr ON t.tournament_id = tr.tournament_id
-       WHERE t.team_id = $1`,
-      [teamId]
-    );
+    const [teamResult, membersResult] = await Promise.all([
+      pool.query<TeamRow & { created_by_username: string; tournament_name: string }>(
+        `SELECT t.team_id,
+                t.tournament_id,
+                t.team_name,
+                t.team_logo,
+                t.created_by_user_id,
+                t.created_at,
+                t.updated_at,
+                u.username AS created_by_username,
+                tr.tournament_name
+         FROM teams t
+         JOIN users u ON t.created_by_user_id = u.user_id
+         JOIN tournaments tr ON t.tournament_id = tr.tournament_id
+         WHERE t.team_id = $1
+         LIMIT 1`,
+        [teamId]
+      ),
+      pool.query<TeamMemberRow>(
+        `SELECT tm.team_member_id,
+                tm.team_id,
+                tm.user_id,
+                tm.role,
+                tm.is_captain,
+                tm.jersey_number,
+                tm.joined_at,
+                u.username,
+                u.email,
+                u.profile_image
+         FROM team_members tm
+         JOIN users u ON tm.user_id = u.user_id
+         WHERE tm.team_id = $1
+         ORDER BY tm.is_captain DESC, tm.joined_at ASC`,
+        [teamId]
+      ),
+    ]);
 
     if (teamResult.rows.length === 0) {
-      throw new Error("Team not found");
+      throw new ApiError(404, "Team not found");
     }
-
-    const membersResult = await pool.query(
-      `SELECT tm.team_member_id, tm.team_id, tm.user_id, tm.role, tm.is_captain, tm.jersey_number,
-              u.username, u.email, u.profile_image
-       FROM team_members tm
-       JOIN users u ON tm.user_id = u.user_id
-       WHERE tm.team_id = $1
-       ORDER BY tm.is_captain DESC, tm.joined_at ASC`,
-      [teamId]
-    );
 
     return {
       team: teamResult.rows[0],
@@ -58,7 +134,14 @@ export const teamService = {
 
   getTeamsByTournament: async (tournamentId: string) => {
     const result = await pool.query(
-      `SELECT t.*, u.username AS created_by_username
+      `SELECT t.team_id,
+              t.tournament_id,
+              t.team_name,
+              t.team_logo,
+              t.created_by_user_id,
+              t.created_at,
+              t.updated_at,
+              u.username AS created_by_username
        FROM teams t
        JOIN users u ON t.created_by_user_id = u.user_id
        WHERE t.tournament_id = $1
@@ -71,7 +154,14 @@ export const teamService = {
 
   getMyTeams: async (userId: string) => {
     const result = await pool.query(
-      `SELECT t.*, tr.tournament_name
+      `SELECT t.team_id,
+              t.tournament_id,
+              t.team_name,
+              t.team_logo,
+              t.created_by_user_id,
+              t.created_at,
+              t.updated_at,
+              tr.tournament_name
        FROM teams t
        JOIN tournaments tr ON t.tournament_id = tr.tournament_id
        WHERE t.created_by_user_id = $1
@@ -83,16 +173,7 @@ export const teamService = {
   },
 
   updateTeam: async (teamId: string, userId: string, body: UpdateTeamBody) => {
-    const ownershipCheck = await pool.query(
-      `SELECT team_id
-       FROM teams
-       WHERE team_id = $1 AND created_by_user_id = $2`,
-      [teamId, userId]
-    );
-
-    if (ownershipCheck.rows.length === 0) {
-      throw new Error("Team not found or you are not authorized");
-    }
+    await ensureTeamOwner(teamId, userId);
 
     const fields: string[] = [];
     const values: any[] = [];
@@ -100,7 +181,7 @@ export const teamService = {
 
     if (body.teamName !== undefined) {
       fields.push(`team_name = $${index++}`);
-      values.push(body.teamName);
+      values.push(body.teamName.trim());
     }
 
     if (body.teamLogo !== undefined) {
@@ -109,36 +190,51 @@ export const teamService = {
     }
 
     if (fields.length === 0) {
-      throw new Error("No fields to update");
+      throw new ApiError(400, "No fields to update");
     }
 
     values.push(teamId);
 
-    const query = `
-      UPDATE teams
-      SET ${fields.join(", ")}
-      WHERE team_id = $${index}
-      RETURNING *;
-    `;
+    try {
+      const query = `
+        UPDATE teams
+        SET ${fields.join(", ")}
+        WHERE team_id = $${index}
+        RETURNING team_id, tournament_id, team_name, team_logo, created_by_user_id, created_at, updated_at
+      `;
 
-    const result = await pool.query(query, values);
+      const result = await pool.query<TeamRow>(query, values);
 
-    return result.rows[0];
+      if (result.rows.length === 0) {
+        throw new ApiError(404, "Team not found");
+      }
+
+      return result.rows[0];
+    } catch (error: any) {
+      if (error?.code === "23505") {
+        throw new ApiError(
+          409,
+          "Team name already exists in this tournament"
+        );
+      }
+
+      throw error;
+    }
   },
 
   deleteTeam: async (teamId: string, userId: string) => {
-    const ownershipCheck = await pool.query(
-      `SELECT team_id
-       FROM teams
-       WHERE team_id = $1 AND created_by_user_id = $2`,
-      [teamId, userId]
+    await ensureTeamOwner(teamId, userId);
+
+    const result = await pool.query(
+      `DELETE FROM teams
+       WHERE team_id = $1
+       RETURNING team_id`,
+      [teamId]
     );
 
-    if (ownershipCheck.rows.length === 0) {
-      throw new Error("Team not found or you are not authorized");
+    if (result.rows.length === 0) {
+      throw new ApiError(404, "Team not found");
     }
-
-    await pool.query(`DELETE FROM teams WHERE team_id = $1`, [teamId]);
 
     return { message: "Team deleted successfully" };
   },

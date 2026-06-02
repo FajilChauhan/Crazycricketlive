@@ -1,69 +1,113 @@
 import { pool } from "../../config/dbconfig";
+import { ApiError } from "../../utils/ApiError";
 import { UpdateProfileBody } from "./profile.types";
+
+type ProfileRow = {
+  user_id: string;
+  username: string;
+  email: string;
+  profile_image: string | null;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+};
+
+const mapProfile = (user: ProfileRow) => ({
+  userId: user.user_id,
+  username: user.username,
+  email: user.email,
+  profileImage: user.profile_image,
+  isActive: user.is_active,
+  createdAt: user.created_at,
+  updatedAt: user.updated_at,
+});
 
 export const profileService = {
   getMyProfile: async (userId: string) => {
-    const result = await pool.query(
+    const result = await pool.query<ProfileRow>(
       `SELECT user_id, username, email, profile_image, is_active, created_at, updated_at
        FROM users
-       WHERE user_id = $1`,
+       WHERE user_id = $1
+       LIMIT 1`,
       [userId]
     );
 
     if (result.rows.length === 0) {
-      throw new Error("User not found");
+      throw new ApiError(404, "User not found");
     }
 
-    return result.rows[0];
+    return mapProfile(result.rows[0]);
   },
 
   updateMyProfile: async (userId: string, body: UpdateProfileBody) => {
     const existingUser = await pool.query(
-      `SELECT user_id FROM users WHERE user_id = $1`,
+      `SELECT user_id
+       FROM users
+       WHERE user_id = $1
+       LIMIT 1`,
       [userId]
     );
 
     if (existingUser.rows.length === 0) {
-      throw new Error("User not found");
+      throw new ApiError(404, "User not found");
     }
 
-    if (body.username) {
+    const username = body.username?.trim();
+    const profileImage = body.profileImage ?? null;
+
+    if (username) {
       const checkUsername = await pool.query(
-        `SELECT user_id FROM users WHERE username = $1 AND user_id <> $2`,
-        [body.username, userId]
+        `SELECT user_id
+         FROM users
+         WHERE LOWER(username) = LOWER($1)
+           AND user_id <> $2
+         LIMIT 1`,
+        [username, userId]
       );
 
       if (checkUsername.rows.length > 0) {
-        throw new Error("Username already exists");
+        throw new ApiError(409, "Username already exists");
       }
     }
 
-    const result = await pool.query(
-      `UPDATE users
-       SET username = COALESCE($1, username),
-           profile_image = COALESCE($2, profile_image),
-           updated_at = NOW()
-       WHERE user_id = $3
-       RETURNING user_id, username, email, profile_image, is_active, created_at, updated_at`,
-      [body.username || null, body.profileImage || null, userId]
-    );
+    try {
+      const result = await pool.query<ProfileRow>(
+        `UPDATE users
+         SET username = COALESCE($1, username),
+             profile_image = COALESCE($2, profile_image),
+             updated_at = NOW()
+         WHERE user_id = $3
+         RETURNING user_id, username, email, profile_image, is_active, created_at, updated_at`,
+        [username || null, profileImage, userId]
+      );
 
-    return result.rows[0];
+      if (result.rows.length === 0) {
+        throw new ApiError(404, "User not found");
+      }
+
+      return mapProfile(result.rows[0]);
+    } catch (error: any) {
+      if (error?.code === "23505") {
+        throw new ApiError(409, "Username already exists");
+      }
+      throw error;
+    }
   },
 
   getProfileById: async (targetUserId: string) => {
-    const result = await pool.query(
+    const result = await pool.query<ProfileRow>(
       `SELECT user_id, username, email, profile_image, is_active, created_at, updated_at
        FROM users
-       WHERE user_id = $1`,
+       WHERE user_id = $1
+       LIMIT 1`,
       [targetUserId]
     );
 
     if (result.rows.length === 0) {
-      throw new Error("User not found");
+      throw new ApiError(404, "User not found");
     }
 
-    return result.rows[0];
+    return mapProfile(result.rows[0]);
   },
 
   getUserTournaments: async (userId: string) => {
@@ -117,7 +161,8 @@ export const profileService = {
        JOIN match_players mp ON m.match_id = mp.match_id
        JOIN teams t1 ON m.team1_id = t1.team_id
        JOIN teams t2 ON m.team2_id = t2.team_id
-       WHERE mp.user_id = $1 AND m.status = 'live'
+       WHERE mp.user_id = $1
+         AND m.status = 'live'
        ORDER BY m.started_at DESC NULLS LAST`,
       [userId]
     );
@@ -126,47 +171,51 @@ export const profileService = {
   },
 
   getUserStats: async (userId: string) => {
-    const totalMatches = await pool.query(
-      `SELECT COUNT(DISTINCT match_id)::int AS count
-       FROM match_players
-       WHERE user_id = $1`,
-      [userId]
-    );
-
-    const totalRuns = await pool.query(
-      `SELECT COALESCE(SUM(runs_scored), 0)::int AS total_runs
-       FROM ball_by_ball
-       WHERE striker_id = $1`,
-      [userId]
-    );
-
-    const totalWickets = await pool.query(
-      `SELECT COALESCE(SUM(CASE WHEN is_wicket = true THEN 1 ELSE 0 END), 0)::int AS total_wickets
-       FROM ball_by_ball
-       WHERE bowler_id = $1`,
-      [userId]
-    );
-
-    const createdTournaments = await pool.query(
-      `SELECT COUNT(*)::int AS count
-       FROM tournaments
-       WHERE created_by_user_id = $1`,
-      [userId]
-    );
-
-    const createdTeams = await pool.query(
-      `SELECT COUNT(*)::int AS count
-       FROM teams
-       WHERE created_by_user_id = $1`,
-      [userId]
-    );
+    const [
+      totalMatchesResult,
+      totalRunsResult,
+      totalWicketsResult,
+      createdTournamentsResult,
+      createdTeamsResult,
+    ] = await Promise.all([
+      pool.query(
+        `SELECT COUNT(DISTINCT match_id)::int AS count
+         FROM match_players
+         WHERE user_id = $1`,
+        [userId]
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(runs_scored), 0)::int AS total_runs
+         FROM ball_by_ball
+         WHERE striker_id = $1`,
+        [userId]
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(CASE WHEN is_wicket = true THEN 1 ELSE 0 END), 0)::int AS total_wickets
+         FROM ball_by_ball
+         WHERE bowler_id = $1`,
+        [userId]
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS count
+         FROM tournaments
+         WHERE created_by_user_id = $1`,
+        [userId]
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS count
+         FROM teams
+         WHERE created_by_user_id = $1`,
+        [userId]
+      ),
+    ]);
 
     return {
-      totalMatches: totalMatches.rows[0].count,
-      totalRuns: totalRuns.rows[0].total_runs,
-      totalWickets: totalWickets.rows[0].total_wickets,
-      createdTournaments: createdTournaments.rows[0].count,
-      createdTeams: createdTeams.rows[0].count,
+      totalMatches: totalMatchesResult.rows[0].count,
+      totalRuns: totalRunsResult.rows[0].total_runs,
+      totalWickets: totalWicketsResult.rows[0].total_wickets,
+      createdTournaments: createdTournamentsResult.rows[0].count,
+      createdTeams: createdTeamsResult.rows[0].count,
     };
   },
 };

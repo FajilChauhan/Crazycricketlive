@@ -1,51 +1,87 @@
 import { pool } from "../../config/dbconfig";
+import { ApiError } from "../../utils/ApiError";
 import { GrantPermissionBody } from "./match-permission.types";
 
-async function ensureMatchOwnerOrAdmin(matchId: string, userId: string) {
-  const result = await pool.query(
-    `SELECT 1
-     FROM matches m
-     WHERE m.match_id = $1 AND (
-       EXISTS (
-         SELECT 1 FROM tournaments t
-         WHERE t.tournament_id = m.tournament_id
-         AND t.created_by_user_id = $2
-       )
-       OR EXISTS (
-         SELECT 1 FROM match_permissions mp
-         WHERE mp.match_id = m.match_id
-         AND mp.user_id = $2
-         AND mp.permission_type = 'match_admin'
-       )
-     )`,
-    [matchId, userId]
+type MatchRow = {
+  match_id: string;
+  tournament_id: string;
+};
+
+async function getMatchOrThrow(matchId: string): Promise<MatchRow> {
+  const result = await pool.query<MatchRow>(
+    `SELECT match_id, tournament_id
+     FROM matches
+     WHERE match_id = $1
+     LIMIT 1`,
+    [matchId]
   );
 
   if (result.rows.length === 0) {
-    throw new Error("You are not authorized");
+    throw new ApiError(404, "Match not found");
   }
+
+  return result.rows[0];
+}
+
+async function ensureMatchOwnerOrAdmin(matchId: string, userId: string) {
+  const match = await getMatchOrThrow(matchId);
+
+  const accessCheck = await pool.query(
+    `SELECT 1
+     FROM tournaments t
+     WHERE t.tournament_id = $1
+       AND (
+         t.created_by_user_id = $2
+         OR EXISTS (
+           SELECT 1
+           FROM match_permissions mp
+           WHERE mp.match_id = $3
+             AND mp.user_id = $2
+             AND mp.permission_type = 'match_admin'
+         )
+       )
+     LIMIT 1`,
+    [match.tournament_id, userId, matchId]
+  );
+
+  if (accessCheck.rows.length === 0) {
+    throw new ApiError(403, "You are not authorized");
+  }
+
+  return match;
 }
 
 export const matchPermissionService = {
-  grantPermission: async (matchId: string, grantedByUserId: string, body: GrantPermissionBody) => {
+  grantPermission: async (
+    matchId: string,
+    grantedByUserId: string,
+    body: GrantPermissionBody
+  ) => {
     await ensureMatchOwnerOrAdmin(matchId, grantedByUserId);
 
-    const userCheck = await pool.query(
-      `SELECT user_id FROM users WHERE user_id = $1 AND is_active = true`,
-      [body.userId]
-    );
-
-    if (userCheck.rows.length === 0) {
-      throw new Error("User not found");
-    }
-
-    const matchCheck = await pool.query(
-      `SELECT match_id FROM matches WHERE match_id = $1`,
-      [matchId]
-    );
+    const [userCheck, matchCheck] = await Promise.all([
+      pool.query(
+        `SELECT user_id
+         FROM users
+         WHERE user_id = $1 AND is_active = true
+         LIMIT 1`,
+        [body.userId]
+      ),
+      pool.query(
+        `SELECT match_id
+         FROM matches
+         WHERE match_id = $1
+         LIMIT 1`,
+        [matchId]
+      ),
+    ]);
 
     if (matchCheck.rows.length === 0) {
-      throw new Error("Match not found");
+      throw new ApiError(404, "Match not found");
+    }
+
+    if (userCheck.rows.length === 0) {
+      throw new ApiError(404, "User not found");
     }
 
     const result = await pool.query(
@@ -53,8 +89,8 @@ export const matchPermissionService = {
        (match_id, user_id, permission_type, granted_by_user_id)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (match_id, user_id, permission_type)
-       DO UPDATE SET granted_by_user_id = EXCLUDED.granted_by_user_id,
-                     created_at = NOW()
+       DO UPDATE SET
+         granted_by_user_id = EXCLUDED.granted_by_user_id
        RETURNING *`,
       [matchId, body.userId, body.permissionType, grantedByUserId]
     );
@@ -81,12 +117,15 @@ export const matchPermissionService = {
   },
 
   checkCurrentUserPermission: async (matchId: string, userId: string) => {
+    await getMatchOrThrow(matchId);
+
     const result = await pool.query(
       `SELECT permission_type
        FROM match_permissions
        WHERE match_id = $1
          AND user_id = $2
-         AND permission_type IN ('score_update', 'match_admin')`,
+         AND permission_type IN ('score_update', 'match_admin')
+       LIMIT 1`,
       [matchId, userId]
     );
 
@@ -109,12 +148,13 @@ export const matchPermissionService = {
     const permissionCheck = await pool.query(
       `SELECT permission_id
        FROM match_permissions
-       WHERE permission_id = $1 AND match_id = $2`,
+       WHERE permission_id = $1 AND match_id = $2
+       LIMIT 1`,
       [permissionId, matchId]
     );
 
     if (permissionCheck.rows.length === 0) {
-      throw new Error("Permission not found");
+      throw new ApiError(404, "Permission not found");
     }
 
     await pool.query(
