@@ -1,5 +1,5 @@
 import { pool } from "../../config/dbconfig";
-import { ApiError } from "../../utils/ApiError";
+import { ApiError } from "../../shared/utils/ApiError";
 import { GrantPermissionBody } from "./match-permission.types";
 
 type MatchRow = {

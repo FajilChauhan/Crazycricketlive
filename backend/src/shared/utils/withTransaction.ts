@@ -1,5 +1,5 @@
 import { PoolClient } from "pg";
-import { pool } from "../config/dbconfig";
+import { pool } from "../../config/dbconfig";
 
 export const withTransaction = async <T>(
   callback: (client: PoolClient) => Promise<T>

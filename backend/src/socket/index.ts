@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import { logger } from "../utils/logger";
+import { logger } from "../shared/utils/logger";
 
 export const setupSocket = (httpServer: any) => {
   const io = new Server(httpServer, {

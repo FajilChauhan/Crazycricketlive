@@ -21,21 +21,21 @@ export const tournamentController = {
   },
 
   getTournamentById: async (req: Request, res: Response) => {
-    const { tournamentId } = req.params;
+    const tournamentId = req.params.tournamentId as string;
     const tournament = await tournamentService.getTournamentById(tournamentId);
     return sendResponse(res, 200, "Tournament details fetched successfully", tournament);
   },
 
   updateTournament: async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId;
-    const { tournamentId } = req.params;
+    const tournamentId = req.params.tournamentId as string;
     const tournament = await tournamentService.updateTournament(tournamentId, userId, req.body);
     return sendResponse(res, 200, "Tournament updated successfully", tournament);
   },
 
   deleteTournament: async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId;
-    const { tournamentId } = req.params;
+    const tournamentId = req.params.tournamentId as string;
     const result = await tournamentService.deleteTournament(tournamentId, userId);
     return sendResponse(res, 200, result.message, result);
   },

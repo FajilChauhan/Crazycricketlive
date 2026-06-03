@@ -16,37 +16,37 @@ export const profileController = {
   },
 
   getProfileById: async (req: Request, res: Response) => {
-    const { userId } = req.params;
+    const userId = req.params.userId as string;
     const result = await profileService.getProfileById(userId);
     return sendResponse(res, 200, "Profile fetched successfully", result);
   },
 
   getUserTournaments: async (req: Request, res: Response) => {
-    const { userId } = req.params;
+    const userId = req.params.userId as string;
     const result = await profileService.getUserTournaments(userId);
     return sendResponse(res, 200, "User tournaments fetched successfully", result);
   },
 
   getUserTeams: async (req: Request, res: Response) => {
-    const { userId } = req.params;
+    const userId = req.params.userId as string;
     const result = await profileService.getUserTeams(userId);
     return sendResponse(res, 200, "User teams fetched successfully", result);
   },
 
   getUserMatches: async (req: Request, res: Response) => {
-    const { userId } = req.params;
+    const userId = req.params.userId as string;
     const result = await profileService.getUserMatches(userId);
     return sendResponse(res, 200, "User matches fetched successfully", result);
   },
 
   getUserLiveMatches: async (req: Request, res: Response) => {
-    const { userId } = req.params;
+    const userId = req.params.userId as string;
     const result = await profileService.getUserLiveMatches(userId);
     return sendResponse(res, 200, "User live matches fetched successfully", result);
   },
 
   getUserStats: async (req: Request, res: Response) => {
-    const { userId } = req.params;
+    const userId = req.params.userId as string;
     const result = await profileService.getUserStats(userId);
     return sendResponse(res, 200, "User stats fetched successfully", result);
   },

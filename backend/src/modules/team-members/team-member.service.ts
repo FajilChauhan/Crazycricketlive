@@ -1,6 +1,6 @@
 import { pool } from "../../config/dbconfig";
-import { ApiError } from "../../utils/ApiError";
-import { withTransaction } from "../../utils/withTransaction";
+import { ApiError } from "../../shared/utils/ApiError";
+import { withTransaction } from "../../shared/utils/withTransaction";
 import { AddTeamMemberBody, UpdateTeamMemberBody } from "./team-member.types";
 
 type TeamOwnerRow = {

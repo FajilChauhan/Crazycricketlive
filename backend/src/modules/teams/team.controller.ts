@@ -10,13 +10,13 @@ export const teamController = {
   },
 
   getTeamById: async (req: Request, res: Response) => {
-    const { teamId } = req.params;
+    const teamId = req.params.teamId as string;
     const team = await teamService.getTeamById(teamId);
     return sendResponse(res, 200, "Team details fetched successfully", team);
   },
 
   getTeamsByTournament: async (req: Request, res: Response) => {
-    const { tournamentId } = req.params;
+    const tournamentId = req.params.tournamentId as string;
     const teams = await teamService.getTeamsByTournament(tournamentId);
     return sendResponse(res, 200, "Tournament teams fetched successfully", teams);
   },
@@ -29,14 +29,14 @@ export const teamController = {
 
   updateTeam: async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId;
-    const { teamId } = req.params;
+    const teamId = req.params.teamId as string;
     const team = await teamService.updateTeam(teamId, userId, req.body);
     return sendResponse(res, 200, "Team updated successfully", team);
   },
 
   deleteTeam: async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId;
-    const { teamId } = req.params;
+    const teamId = req.params.teamId as string;
     const result = await teamService.deleteTeam(teamId, userId);
     return sendResponse(res, 200, result.message, result);
   },

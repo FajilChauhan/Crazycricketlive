@@ -11,7 +11,7 @@ import pointRoutes from "./modules/points/point.route";
 import dashboardRoutes from "./modules/dashboard/dashboard.route";
 import profileRoutes from "./modules/profile/profile.route";
 import searchRoutes from "./modules/search/search.route";
-import { errorHandler } from "./middlewares/error.middleware";
+import { errorHandler } from "./shared/middlewares/error.middleware";
 
 const app = express();
 

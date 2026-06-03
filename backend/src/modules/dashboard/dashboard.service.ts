@@ -1,5 +1,5 @@
 import { pool } from "../../config/dbconfig";
-import { ApiError } from "../../utils/ApiError";
+import { ApiError } from "../../shared/utils/ApiError";
 
 type CountRow = {
   count: number;

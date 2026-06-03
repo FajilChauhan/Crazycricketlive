@@ -6,7 +6,7 @@ import app from "./app";
 import { testDbConnection } from "./config/dbconfig";
 import { setupSocket } from "./socket";
 import { connectRedis } from "./config/redis";
-import { logger } from "./utils/logger";
+import { logger } from "./shared/utils/logger";
 
 const PORT = Number(process.env.PORT) || 5000;
 
@@ -21,6 +21,7 @@ const startServer = async () => {
     app.set("io", io);
 
     httpServer.listen(PORT, () => {
+      console.log("Server running on http://localhost:5000");
       logger.info(`Server running on port ${PORT}`);
     });
   } catch (error) {

@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { pool } from "../../config/dbconfig";
-import { ApiError } from "../../utils/ApiError";
+import { ApiError } from "../../shared/utils/ApiError";
 import { LoginBody, RegisterBody } from "./auth.types";
 
 const JWT_SECRET = process.env.JWT_SECRET;
