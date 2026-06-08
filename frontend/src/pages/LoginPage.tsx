@@ -84,9 +84,17 @@ const LoginPage = () => {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-white/60 mb-2">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-white/60">
+                  Password
+                </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-xs text-green-400 hover:text-green-300 transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <Lock
                   size={16}

@@ -364,10 +364,10 @@ const TeamDetailPage = () => {
 
         {/* ── Team Header ── */}
         <div className="bg-[#1a1a1a] border border-white/[0.07] rounded-2xl p-6">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 flex-wrap">
 
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center flex-shrink-0">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center flex-shrink-0 mx-auto sm:mx-0">
                 {team.team_logo ? (
                   <img
                     src={team.team_logo}
@@ -386,7 +386,7 @@ const TeamDetailPage = () => {
                 <p className="text-white/40 text-sm mt-0.5">
                   {team.tournament_name}
                 </p>
-                <div className="flex items-center gap-3 mt-2 flex-wrap">
+                <div className="flex items-center justify-center sm:justify-start gap-3 mt-2 flex-wrap">
                   <span className="text-white/30 text-xs">
                     {members.length} {members.length === 1 ? "player" : "players"}
                   </span>
@@ -407,7 +407,7 @@ const TeamDetailPage = () => {
             {isOwner && (
               <button
                 onClick={() => setShowAddPlayer(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-semibold transition-colors"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-semibold transition-colors"
               >
                 <Plus size={15} />
                 Add Player

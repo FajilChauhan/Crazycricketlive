@@ -18,4 +18,22 @@ export const authController = {
     const user = await authService.getMe(userId);
     return sendResponse(res, 200, "User profile fetched successfully", user);
   },
+
+  forgotPassword: async (req: Request, res: Response) => {
+    const { email } = req.body;
+    const result = await authService.forgotPassword(email);
+    return sendResponse(res, 200, "Verification code generated and sent", result);
+  },
+
+  verifyResetCode: async (req: Request, res: Response) => {
+    const { email, code } = req.body;
+    const result = await authService.verifyResetCode(email, code);
+    return sendResponse(res, 200, "Code verified successfully", result);
+  },
+
+  resetPassword: async (req: Request, res: Response) => {
+    const { email, code, newPassword } = req.body;
+    const result = await authService.resetPassword(email, code, newPassword);
+    return sendResponse(res, 200, "Password reset successfully", result);
+  },
 };

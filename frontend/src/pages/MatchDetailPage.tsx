@@ -478,38 +478,40 @@ const InningsScorecardSection = ({
         ) : (battingData as any[]).length === 0 ? (
           <div className="py-8 text-center text-white/20 text-sm">No batting data yet</div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/[0.05]">
-                {["Batter", "R", "B", "4s", "6s", "SR"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-white/30 text-xs font-medium text-left">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {(battingData as any[]).map((b: any) => (
-                <tr key={b.user_id}
-                  onClick={() => navigate(`/players/${b.user_id}`)}
-                  className="border-b border-white/[0.03] hover:bg-white/[0.03] cursor-pointer transition-colors">
-                  <td className="px-4 py-3">
-                    <p className="text-white font-medium">{b.username}</p>
-                    {b.is_out ? (
-                      <p className="text-red-400/60 text-[10px]">out</p>
-                    ) : (
-                      <p className="text-green-400/60 text-[10px]">not out</p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-white font-bold">{b.runs}</td>
-                  <td className="px-4 py-3 text-white/50">{b.balls}</td>
-                  <td className="px-4 py-3 text-blue-400">{b.fours}</td>
-                  <td className="px-4 py-3 text-green-400">{b.sixes}</td>
-                  <td className="px-4 py-3 text-white/50">
-                    {b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : "0.0"}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[500px]">
+              <thead>
+                <tr className="border-b border-white/[0.05]">
+                  {["Batter", "R", "B", "4s", "6s", "SR"].map((h) => (
+                    <th key={h} className="px-4 py-3 text-white/30 text-xs font-medium text-left">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(battingData as any[]).map((b: any) => (
+                  <tr key={b.user_id}
+                    onClick={() => navigate(`/players/${b.user_id}`)}
+                    className="border-b border-white/[0.03] hover:bg-white/[0.03] cursor-pointer transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="text-white font-medium">{b.username}</p>
+                      {b.is_out ? (
+                        <p className="text-red-400/60 text-[10px]">out</p>
+                      ) : (
+                        <p className="text-green-400/60 text-[10px]">not out</p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-white font-bold">{b.runs}</td>
+                    <td className="px-4 py-3 text-white/50">{b.balls}</td>
+                    <td className="px-4 py-3 text-blue-400">{b.fours}</td>
+                    <td className="px-4 py-3 text-green-400">{b.sixes}</td>
+                    <td className="px-4 py-3 text-white/50">
+                      {b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : "0.0"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
         {/* Extras & Total */}
         <div className="px-5 py-3 border-t border-white/[0.05] flex items-center justify-between">
@@ -533,30 +535,32 @@ const InningsScorecardSection = ({
         ) : (bowlingData as any[]).length === 0 ? (
           <div className="py-8 text-center text-white/20 text-sm">No bowling data yet</div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/[0.05]">
-                {["Bowler", "O", "R", "W", "Econ"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-white/30 text-xs font-medium text-left">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {(bowlingData as any[]).map((b: any) => (
-                <tr key={b.user_id}
-                  onClick={() => navigate(`/players/${b.user_id}`)}
-                  className="border-b border-white/[0.03] hover:bg-white/[0.03] cursor-pointer transition-colors">
-                  <td className="px-4 py-3 text-white font-medium">{b.username}</td>
-                  <td className="px-4 py-3 text-white/50">{oversStr(b.balls)}</td>
-                  <td className="px-4 py-3 text-white/50">{b.runs_conceded}</td>
-                  <td className="px-4 py-3 text-red-400 font-bold">{b.wickets}</td>
-                  <td className="px-4 py-3 text-white/50">
-                    {b.balls > 0 ? ((b.runs_conceded / b.balls) * 6).toFixed(1) : "0.0"}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[500px]">
+              <thead>
+                <tr className="border-b border-white/[0.05]">
+                  {["Bowler", "O", "R", "W", "Econ"].map((h) => (
+                    <th key={h} className="px-4 py-3 text-white/30 text-xs font-medium text-left">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(bowlingData as any[]).map((b: any) => (
+                  <tr key={b.user_id}
+                    onClick={() => navigate(`/players/${b.user_id}`)}
+                    className="border-b border-white/[0.03] hover:bg-white/[0.03] cursor-pointer transition-colors">
+                    <td className="px-4 py-3 text-white font-medium">{b.username}</td>
+                    <td className="px-4 py-3 text-white/50">{oversStr(b.balls)}</td>
+                    <td className="px-4 py-3 text-white/50">{b.runs_conceded}</td>
+                    <td className="px-4 py-3 text-red-400 font-bold">{b.wickets}</td>
+                    <td className="px-4 py-3 text-white/50">
+                      {b.balls > 0 ? ((b.runs_conceded / b.balls) * 6).toFixed(1) : "0.0"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

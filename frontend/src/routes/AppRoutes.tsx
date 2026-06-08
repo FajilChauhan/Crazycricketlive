@@ -8,6 +8,7 @@ import CreateTournamentPage from "../pages/CreateTournamentPage";
 import ProfilePage from "../pages/ProfilePage";
 import LoginPage from "../pages/LoginPage";
 import SignupPage from "../pages/SignupPage";
+import ForgotPasswordPage from "../pages/ForgotPasswordPage";
 import TournamentDetailPage from "../pages/TournamentDetailPage";
 import TournamentsPage from "../pages/TournamentsPage";
 import TeamDetailPage from "../pages/TeamDetailPage";
@@ -26,6 +27,7 @@ const AppRoutes = () => {
 <Route path="/tournaments/:id" element={<TournamentDetailPage />} />
 
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/signup" element={<SignupPage />} />
 
         <Route path="/create" element={

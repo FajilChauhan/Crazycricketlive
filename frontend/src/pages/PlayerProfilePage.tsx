@@ -134,11 +134,10 @@ const PlayerProfilePage = () => {
           <ArrowLeft size={16} /> Back
         </button>
 
-        {/* ── Profile Card ── */}
         <div className="bg-[#1a1a1a] border border-white/[0.07] rounded-2xl p-6">
-          <div className="flex items-center gap-5">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-5">
             {/* Avatar */}
-            <div className="w-20 h-20 rounded-2xl flex-shrink-0 overflow-hidden">
+            <div className="w-20 h-20 rounded-2xl flex-shrink-0 overflow-hidden mx-auto sm:mx-0">
               {profile?.profile_image ? (
                 <img
                   src={profile.profile_image}
@@ -153,8 +152,8 @@ const PlayerProfilePage = () => {
             </div>
 
             {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
+            <div className="flex-grow flex flex-col items-center sm:items-start min-w-0 w-full">
+              <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap mb-1">
                 <h1 className="text-white text-2xl font-bold">{displayName}</h1>
                 {profile?.is_captain && (
                   <span className="flex items-center gap-1 text-yellow-400 text-xs border border-yellow-500/25 bg-yellow-500/10 rounded-full px-2 py-0.5">
@@ -163,7 +162,7 @@ const PlayerProfilePage = () => {
                 )}
               </div>
               {profile?.email && (
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center justify-center sm:justify-start gap-1.5">
                   <Mail size={12} className="text-white/25" />
                   <p className="text-white/40 text-sm">{profile.email}</p>
                 </div>

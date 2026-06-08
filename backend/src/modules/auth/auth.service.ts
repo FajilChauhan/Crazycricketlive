@@ -137,4 +137,88 @@ export const authService = {
 
     return mapUser(result.rows[0]);
   },
+
+  forgotPassword: async (email: string) => {
+    const emailLower = email.trim().toLowerCase();
+    const result = await pool.query(
+      `SELECT user_id
+       FROM users
+       WHERE LOWER(email) = $1 AND is_active = true
+       LIMIT 1`,
+      [emailLower]
+    );
+    if (result.rows.length === 0) {
+      throw new ApiError(404, "User not found with this email");
+    }
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    await pool.query(
+      `UPDATE users
+       SET reset_code = $1, reset_code_expires_at = $2
+       WHERE LOWER(email) = $3`,
+      [code, expiresAt, emailLower]
+    );
+
+    console.log(`\n======================================================`);
+    console.log(`🔑 PASSWORD RESET CODE FOR ${emailLower}: [ ${code} ]`);
+    console.log(`======================================================\n`);
+
+    return {
+      message: "Reset code generated",
+      code, // return for easy testing in development/sandbox
+    };
+  },
+
+  verifyResetCode: async (email: string, code: string) => {
+    const emailLower = email.trim().toLowerCase();
+    const result = await pool.query(
+      `SELECT reset_code, reset_code_expires_at
+       FROM users
+       WHERE LOWER(email) = $1 AND is_active = true
+       LIMIT 1`,
+      [emailLower]
+    );
+    if (result.rows.length === 0) {
+      throw new ApiError(404, "User not found");
+    }
+    const user = result.rows[0];
+    if (!user.reset_code || user.reset_code !== code) {
+      throw new ApiError(400, "Invalid reset code");
+    }
+    if (new Date() > new Date(user.reset_code_expires_at)) {
+      throw new ApiError(400, "Reset code has expired");
+    }
+    return { valid: true };
+  },
+
+  resetPassword: async (email: string, code: string, newPassword: string) => {
+    const emailLower = email.trim().toLowerCase();
+    const result = await pool.query(
+      `SELECT user_id, reset_code, reset_code_expires_at
+       FROM users
+       WHERE LOWER(email) = $1 AND is_active = true
+       LIMIT 1`,
+      [emailLower]
+    );
+    if (result.rows.length === 0) {
+      throw new ApiError(404, "User not found");
+    }
+    const user = result.rows[0];
+    if (!user.reset_code || user.reset_code !== code) {
+      throw new ApiError(400, "Invalid reset code");
+    }
+    if (new Date() > new Date(user.reset_code_expires_at)) {
+      throw new ApiError(400, "Reset code has expired");
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await pool.query(
+      `UPDATE users
+       SET password_hash = $1, reset_code = NULL, reset_code_expires_at = NULL
+       WHERE user_id = $2`,
+      [passwordHash, user.user_id]
+    );
+    return { success: true };
+  },
 };

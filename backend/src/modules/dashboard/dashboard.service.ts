@@ -116,7 +116,16 @@ export const dashboardService = {
     }
   },
 
-  // Removed getTopTeams — no longer needed on dashboard
+  getTopTeams: async () => {
+    try {
+      const result = await pool.query(
+        `SELECT team_id, team_name, team_logo FROM teams LIMIT 10`
+      );
+      return result.rows;
+    } catch (error) {
+      throw new ApiError(500, "Failed to fetch top teams");
+    }
+  },
 
   getTopPlayers: async () => {
     try {

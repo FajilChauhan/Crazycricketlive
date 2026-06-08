@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authController } from "./auth.controller";
 import { authenticateToken } from "../../shared/middlewares/auth.middleware";
 import { asyncHandler } from "../../shared/utils/asyncHandler";
-import { loginSchema, registerSchema } from "./auth.schema";
+import { loginSchema, registerSchema, forgotPasswordSchema, verifyResetCodeSchema, resetPasswordSchema } from "./auth.schema";
 
 const router = Router();
 
@@ -26,5 +26,9 @@ const validateBody =
 router.post("/register", validateBody(registerSchema), asyncHandler(authController.register));
 router.post("/login", validateBody(loginSchema), asyncHandler(authController.login));
 router.get("/me", authenticateToken, asyncHandler(authController.me));
+
+router.post("/forgot-password", validateBody(forgotPasswordSchema), asyncHandler(authController.forgotPassword));
+router.post("/verify-reset-code", validateBody(verifyResetCodeSchema), asyncHandler(authController.verifyResetCode));
+router.post("/reset-password", validateBody(resetPasswordSchema), asyncHandler(authController.resetPassword));
 
 export default router;

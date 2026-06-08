@@ -482,100 +482,42 @@ console.log("Tournament Owner ID:", tournament?.created_by_user_id);
       <EmptyState icon={<BarChart2 size={28} />} text="Points table not available yet" />
     ) : (
       <>
-        {/* Desktop table — hidden on mobile */}
-        <div className="hidden sm:block bg-[#1a1a1a] border border-white/[0.07] rounded-2xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/[0.06]">
-                {["#", "Team", "M", "W", "L", "T", "NR", "Pts", "NRR"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-white/30 font-medium text-xs text-left">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {pointsTable.map((row, i) => (
-                <tr
-                  key={row.team_id}
-                  className={`border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors
-                    ${i === 0 ? "bg-green-500/5" : ""}`}
-                >
-                  <td className="px-4 py-3 text-white/30 text-xs">{i + 1}</td>
-                  <td className="px-4 py-3 text-white font-medium">{row.team_name}</td>
-                  <td className="px-4 py-3 text-white/50">{row.matches_played}</td>
-                  <td className="px-4 py-3 text-green-400 font-medium">{row.wins}</td>
-                  <td className="px-4 py-3 text-red-400">{row.losses}</td>
-                  <td className="px-4 py-3 text-white/50">{row.ties}</td>
-                  <td className="px-4 py-3 text-white/50">{row.no_results}</td>
-                  <td className="px-4 py-3 text-white font-bold">{row.points}</td>
-                  <td className="px-4 py-3 text-white/50 text-xs">
-                    {row.net_run_rate >= 0 ? "+" : ""}
-                    {Number(row.net_run_rate).toFixed(3)}
-                  </td>
+        <div className="bg-[#1a1a1a] border border-white/[0.07] rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[600px]">
+              <thead>
+                <tr className="border-b border-white/[0.06]">
+                  {["#", "Team", "M", "W", "L", "T", "NR", "Pts", "NRR"].map((h) => (
+                    <th key={h} className="px-4 py-3 text-white/30 font-medium text-xs text-left">
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile cards — shown only on mobile */}
-        <div className="sm:hidden space-y-2">
-          {/* Header labels */}
-          <div className="flex items-center justify-between px-3 pb-1">
-            <span className="text-white/25 text-[10px] font-semibold uppercase tracking-wider">Team</span>
-            <div className="flex items-center gap-4">
-              {["W", "L", "Pts", "NRR"].map((h) => (
-                <span key={h} className="text-white/25 text-[10px] font-semibold uppercase tracking-wider w-7 text-center">
-                  {h}
-                </span>
-              ))}
-            </div>
+              </thead>
+              <tbody>
+                {pointsTable.map((row, i) => (
+                  <tr
+                    key={row.team_id}
+                    className={`border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors
+                      ${i === 0 ? "bg-green-500/5" : ""}`}
+                  >
+                    <td className="px-4 py-3 text-white/30 text-xs">{i + 1}</td>
+                    <td className="px-4 py-3 text-white font-medium">{row.team_name}</td>
+                    <td className="px-4 py-3 text-white/50">{row.matches_played}</td>
+                    <td className="px-4 py-3 text-green-400 font-medium">{row.wins}</td>
+                    <td className="px-4 py-3 text-red-400">{row.losses}</td>
+                    <td className="px-4 py-3 text-white/50">{row.ties}</td>
+                    <td className="px-4 py-3 text-white/50">{row.no_results}</td>
+                    <td className="px-4 py-3 text-white font-bold">{row.points}</td>
+                    <td className="px-4 py-3 text-white/50 text-xs">
+                      {row.net_run_rate >= 0 ? "+" : ""}
+                      {Number(row.net_run_rate).toFixed(3)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-
-          {pointsTable.map((row, i) => (
-            <div
-              key={row.team_id}
-              className={`flex items-center justify-between px-3.5 py-3 rounded-xl border transition-colors
-                ${i === 0
-                  ? "bg-green-500/6 border-green-500/15"
-                  : "bg-[#1a1a1a] border-white/[0.07]"}`}
-            >
-              {/* Rank + Team */}
-              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <span className={`text-xs font-bold w-5 text-center flex-shrink-0
-                  ${i === 0 ? "text-green-400" : i === 1 ? "text-white/50" : i === 2 ? "text-yellow-500/70" : "text-white/20"}`}>
-                  {i + 1}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-white text-sm font-medium truncate">{row.team_name}</p>
-                  <p className="text-white/25 text-[10px] mt-0.5">
-                    {row.matches_played}M · {row.ties > 0 ? `${row.ties}T · ` : ""}{row.no_results > 0 ? `${row.no_results}NR` : ""}
-                  </p>
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="flex items-center gap-4 flex-shrink-0">
-                <div className="w-7 text-center">
-                  <span className="text-green-400 font-semibold text-sm">{row.wins}</span>
-                </div>
-                <div className="w-7 text-center">
-                  <span className="text-red-400 text-sm">{row.losses}</span>
-                </div>
-                <div className="w-7 text-center">
-                  <span className="text-white font-bold text-sm">{row.points}</span>
-                </div>
-                <div className="w-7 text-center">
-                  <span className={`text-[11px] font-medium tabular-nums
-                    ${row.net_run_rate >= 0 ? "text-green-400/70" : "text-red-400/70"}`}>
-                    {row.net_run_rate >= 0 ? "+" : ""}
-                    {Number(row.net_run_rate).toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
       </>
     )}

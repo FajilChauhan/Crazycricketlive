@@ -1195,7 +1195,7 @@ useEffect(() => {
             {lastSixBalls.length > 0 && (
               <div className="flex items-center gap-1.5 pt-3 border-t border-white/[0.05]">
                 <span className="text-white/20 text-[10px] mr-1 w-10 flex-shrink-0">Last 6</span>
-                <div className="flex gap-1.5">
+                <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
                   {lastSixBalls.map((b: any) => <BallTag key={b.ball_by_ball_id} ball={b} />)}
                 </div>
               </div>

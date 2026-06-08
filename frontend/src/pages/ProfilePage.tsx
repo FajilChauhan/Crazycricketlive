@@ -134,16 +134,16 @@ const ProfilePage = () => {
 
         {/* ── profile card ── */}
         <div className="bg-[#1a1a1a] border border-white/[0.07] rounded-2xl p-6">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-5">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 mx-auto sm:mx-0">
                 {profile?.profileImage
                   ? <img src={profile.profileImage} alt="" className="w-full h-full object-cover rounded-2xl" />
                   : initials}
               </div>
-              <div>
+              <div className="flex flex-col items-center sm:items-start">
                 {editing ? (
-                  <form onSubmit={handleSubmit(onEditSubmit)} className="flex items-center gap-2 flex-wrap">
+                  <form onSubmit={handleSubmit(onEditSubmit)} className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
                     <input
                       {...register("username")}
                       autoFocus
@@ -158,7 +158,7 @@ const ProfilePage = () => {
                       <X size={14} />
                     </button>
                     {errors.username && (
-                      <p className="text-red-400 text-xs">{errors.username.message}</p>
+                      <p className="text-red-400 text-xs w-full text-center sm:text-left">{errors.username.message}</p>
                     )}
                   </form>
                 ) : (
@@ -170,11 +170,11 @@ const ProfilePage = () => {
                     </button>
                   </div>
                 )}
-                <div className="flex items-center gap-1.5 mt-1">
+                <div className="flex items-center justify-center sm:justify-start gap-1.5 mt-1">
                   <Mail size={12} className="text-white/25" />
                   <span className="text-white/40 text-sm">{profile?.email ?? authUser?.email ?? "—"}</span>
                 </div>
-                <div className="flex items-center gap-1.5 mt-0.5">
+                <div className="flex items-center justify-center sm:justify-start gap-1.5 mt-0.5">
                   <Calendar size={12} className="text-white/25" />
                   <span className="text-white/30 text-xs">
                     Joined{" "}
@@ -185,7 +185,7 @@ const ProfilePage = () => {
                 </div>
               </div>
             </div>
-            <span className="text-xs bg-green-500/10 text-green-400 border border-green-500/20 rounded-full px-3 py-1 font-medium">
+            <span className="text-xs bg-green-500/10 text-green-400 border border-green-500/20 rounded-full px-3 py-1 font-medium sm:self-start">
               Active
             </span>
           </div>
