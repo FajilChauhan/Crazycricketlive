@@ -3,9 +3,10 @@ export interface CreateMatchBody {
   team1Id: string;
   team2Id: string;
   groundName: string;
-  matchType?: string;
+  matchType: string;
   overs: number;
   matchNo: number;
+  matchMode?: "team" | "1v1"; 
   scheduledStartAt?: string;
 }
 
@@ -53,4 +54,17 @@ export interface AddBallBody {
   isWicket?: boolean;
   wicketType?: string;
   commentary?: string;
+}
+
+// match.types.ts
+export type SaveScoringStateBody = {
+  phase: string;
+  strikerId?: string | null;
+  nonStrikerId?: string | null;
+  bowlerId?: string | null;
+  outBatsmanId?: string | null;
+  retiredIds?: string[];
+  dismissedIds?: string[];        // ✅ NEW — all dismissed batsmen this innings
+  newBatsmanReason?: string;
+  wicketWasLastBall?: boolean;
 }

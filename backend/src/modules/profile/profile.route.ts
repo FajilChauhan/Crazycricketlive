@@ -21,14 +21,85 @@ const validateBody =
     next();
   };
 
-router.get("/me", authenticateToken, asyncHandler(profileController.getMyProfile));
-router.put("/me", authenticateToken, validateBody(updateProfileSchema), asyncHandler(profileController.updateMyProfile));
+router.get(
+  "/me",
+  authenticateToken,
+  asyncHandler(profileController.getMyProfile)
+);
 
-router.get("/:userId", authenticateToken, asyncHandler(profileController.getProfileById));
-router.get("/:userId/tournaments", authenticateToken, asyncHandler(profileController.getUserTournaments));
-router.get("/:userId/teams", authenticateToken, asyncHandler(profileController.getUserTeams));
-router.get("/:userId/matches", authenticateToken, asyncHandler(profileController.getUserMatches));
-router.get("/:userId/live-matches", authenticateToken, asyncHandler(profileController.getUserLiveMatches));
-router.get("/:userId/stats", authenticateToken, asyncHandler(profileController.getUserStats));
+router.put(
+  "/me",
+  authenticateToken,
+  validateBody(updateProfileSchema),
+  asyncHandler(profileController.updateMyProfile)
+);
+
+router.get(
+  "/me/stats",
+  authenticateToken,
+  asyncHandler(profileController.getMyStats)
+);
+
+router.get(
+  "/me/tournaments",
+  authenticateToken,
+  asyncHandler(profileController.getMyTournaments)
+);
+
+router.get(
+  "/me/teams",
+  authenticateToken,
+  asyncHandler(profileController.getMyTeams)
+);
+
+router.get(
+  "/me/matches",
+  authenticateToken,
+  asyncHandler(profileController.getMyMatches)
+);
+
+router.get(
+  "/me/live-matches",
+  authenticateToken,
+  asyncHandler(profileController.getMyLiveMatches)
+);
+
+/* PUBLIC PROFILE ROUTES BELOW */
+
+router.get(
+  "/:userId",
+  authenticateToken,
+  asyncHandler(profileController.getProfileById)
+);
+
+router.get(
+  "/:userId/tournaments",
+  authenticateToken,
+  asyncHandler(profileController.getUserTournaments)
+);
+
+router.get(
+  "/:userId/teams",
+  authenticateToken,
+  asyncHandler(profileController.getUserTeams)
+);
+
+router.get(
+  "/:userId/matches",
+  authenticateToken,
+  asyncHandler(profileController.getUserMatches)
+);
+
+router.get(
+  "/:userId/live-matches",
+  authenticateToken,
+  asyncHandler(profileController.getUserLiveMatches)
+);
+
+router.get(
+  "/:userId/stats",
+  authenticateToken,
+  asyncHandler(profileController.getUserStats)
+);
 
 export default router;

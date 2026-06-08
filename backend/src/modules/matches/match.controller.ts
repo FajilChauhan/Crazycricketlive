@@ -43,11 +43,11 @@ export const matchController = {
   },
 
   updateStatus: async (req: Request, res: Response) => {
-    const userId = (req as any).user?.userId;
-    const matchId = req.params.matchId as string;
-    const match = await matchService.updateStatus(matchId, userId, req.body);
-    return sendResponse(res, 200, "Match status updated successfully", match);
-  },
+  const userId = (req as any).user?.userId;
+  const matchId = req.params.matchId as string;
+  const match = await matchService.updateStatus(matchId, userId, req.body);
+  return sendResponse(res, 200, "Match status updated successfully", match);
+},
 
   addPlayingXI: async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId;
@@ -110,13 +110,15 @@ export const matchController = {
 
   getBattingScorecard: async (req: Request, res: Response) => {
     const matchId = req.params.matchId as string;
-    const result = await matchService.getBattingScorecard(matchId);
+    const inningsId = req.query.inningsId as string | undefined;
+    const result = await matchService.getBattingScorecard(matchId, inningsId);
     return sendResponse(res, 200, "Batting scorecard fetched successfully", result);
   },
 
   getBowlingScorecard: async (req: Request, res: Response) => {
     const matchId = req.params.matchId as string;
-    const result = await matchService.getBowlingScorecard(matchId);
+    const inningsId = req.query.inningsId as string | undefined;
+    const result = await matchService.getBowlingScorecard(matchId, inningsId);
     return sendResponse(res, 200, "Bowling scorecard fetched successfully", result);
   },
 
@@ -143,4 +145,37 @@ export const matchController = {
     const result = await matchService.getPlayerStats(userId);
     return sendResponse(res, 200, "Player stats fetched successfully", result);
   },
+  declareWinner: async (req: Request, res: Response) => {
+  const userId = (req as any).user?.userId;
+  const matchId = req.params.matchId as string;
+  const result = await matchService.declareWinner(matchId, userId, req.body);
+  return sendResponse(res, 200, "Winner declared", result);
+},
+
+declareTie: async (req: Request, res: Response) => {
+  const userId = (req as any).user?.userId;
+  const matchId = req.params.matchId as string;
+  const result = await matchService.declareTie(matchId, userId);
+  return sendResponse(res, 200, "Match declared tie", result);
+},
+
+getScoringState: async (req: Request, res: Response) => {
+  const matchId = req.params.matchId as string;
+  const state = await matchService.getScoringState(matchId);
+  return sendResponse(res, 200, "Scoring state fetched successfully", { state });
+},
+
+saveScoringState: async (req: Request, res: Response) => {
+  const matchId = req.params.matchId as string;
+  const userId = (req as any).user?.userId as string;
+  const state = await matchService.saveScoringState(matchId, userId, req.body);
+  return sendResponse(res, 200, "Scoring state saved successfully", { state });
+},
+
+clearScoringState: async (req: Request, res: Response) => {
+  const matchId = req.params.matchId as string;
+  const userId = (req as any).user?.userId as string;
+  await matchService.clearScoringState(matchId, userId);
+  return sendResponse(res, 200, "Scoring state cleared successfully", null);
+},
 };

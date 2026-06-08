@@ -30,11 +30,11 @@ router.post(
   asyncHandler(tournamentController.createTournament)
 );
 
-router.get("/", authenticateToken, asyncHandler(tournamentController.getAllTournaments));
+router.get("/", asyncHandler(tournamentController.getAllTournaments));
 
-router.get("/me", authenticateToken, asyncHandler(tournamentController.getMyTournaments));
+router.get("/me", asyncHandler(tournamentController.getMyTournaments));
 
-router.get("/:tournamentId", authenticateToken, asyncHandler(tournamentController.getTournamentById));
+router.get("/:tournamentId", asyncHandler(tournamentController.getTournamentById));
 
 router.put(
   "/:tournamentId",

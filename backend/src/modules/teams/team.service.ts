@@ -223,19 +223,34 @@ export const teamService = {
   },
 
   deleteTeam: async (teamId: string, userId: string) => {
-    await ensureTeamOwner(teamId, userId);
+  await ensureTeamOwner(teamId, userId);
 
-    const result = await pool.query(
-      `DELETE FROM teams
-       WHERE team_id = $1
-       RETURNING team_id`,
-      [teamId]
+  // ✅ Check if team has played any matches
+  const matchCheck = await pool.query(
+    `SELECT match_id FROM matches
+     WHERE team1_id = $1 OR team2_id = $1
+     LIMIT 1`,
+    [teamId]
+  );
+
+  if (matchCheck.rows.length > 0) {
+    throw new ApiError(
+      400,
+      "Cannot delete team — it has been used in matches. You can only delete teams that have no matches."
     );
+  }
 
-    if (result.rows.length === 0) {
-      throw new ApiError(404, "Team not found");
-    }
+  const result = await pool.query(
+    `DELETE FROM teams
+     WHERE team_id = $1
+     RETURNING team_id`,
+    [teamId]
+  );
 
-    return { message: "Team deleted successfully" };
-  },
+  if (result.rows.length === 0) {
+    throw new ApiError(404, "Team not found");
+  }
+
+  return { message: "Team deleted successfully" };
+},
 };

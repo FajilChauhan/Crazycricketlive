@@ -116,31 +116,31 @@ export const matchPermissionService = {
     return result.rows;
   },
 
-  checkCurrentUserPermission: async (matchId: string, userId: string) => {
-    await getMatchOrThrow(matchId);
+checkCurrentUserPermission: async (matchId: string, userId: string) => {
+  await getMatchOrThrow(matchId);
 
-    const result = await pool.query(
-      `SELECT permission_type
-       FROM match_permissions
-       WHERE match_id = $1
-         AND user_id = $2
-         AND permission_type IN ('score_update', 'match_admin')
-       LIMIT 1`,
-      [matchId, userId]
-    );
+  // ✅ Check if user is tournament owner
+  const ownerCheck = await pool.query(
+    `SELECT 1 FROM tournaments t
+     JOIN matches m ON m.tournament_id = t.tournament_id
+     WHERE m.match_id = $1 AND t.created_by_user_id = $2 LIMIT 1`,
+    [matchId, userId]
+  );
+  const isOwner = ownerCheck.rows.length > 0;
 
-    if (result.rows.length === 0) {
-      return {
-        canUpdateScore: false,
-        permissionType: null,
-      };
-    }
+  const result = await pool.query(
+    `SELECT permission_type FROM match_permissions
+     WHERE match_id = $1 AND user_id = $2
+     AND permission_type IN ('score_update', 'match_admin') LIMIT 1`,
+    [matchId, userId]
+  );
 
-    return {
-      canUpdateScore: true,
-      permissionType: result.rows[0].permission_type,
-    };
-  },
+  return {
+    isOwner,                                          // ✅ new field
+    canUpdateScore: isOwner || result.rows.length > 0,
+    permissionType: result.rows[0]?.permission_type ?? null,
+  };
+},
 
   revokePermission: async (matchId: string, permissionId: string, userId: string) => {
     await ensureMatchOwnerOrAdmin(matchId, userId);

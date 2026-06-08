@@ -50,4 +50,78 @@ export const profileController = {
     const result = await profileService.getUserStats(userId);
     return sendResponse(res, 200, "User stats fetched successfully", result);
   },
+  getMyStats: async (req: Request, res: Response) => {
+  const userId = (req as any).user.userId;
+
+  const result =
+    await profileService.getUserStats(userId);
+
+  return sendResponse(
+    res,
+    200,
+    "My stats fetched successfully",
+    result
+  );
+},
+getMyTournaments: async (
+  req: Request,
+  res: Response
+) => {
+  const userId = (req as any).user.userId;
+
+  const result =
+    await profileService.getUserTournaments(userId);
+
+  return sendResponse(
+    res,
+    200,
+    "My tournaments fetched successfully",
+    result
+  );
+},getMyTeams: async (
+  req: Request,
+  res: Response
+) => {
+  const userId = (req as any).user.userId;
+
+  const result =
+    await profileService.getUserTeams(userId);
+
+  return sendResponse(
+    res,
+    200,
+    "My teams fetched successfully",
+    result
+  );
+},getMyMatches: async (
+  req: Request,
+  res: Response
+) => {
+  const userId = (req as any).user.userId;
+
+  const result =
+    await profileService.getUserMatches(userId);
+
+  return sendResponse(
+    res,
+    200,
+    "My matches fetched successfully",
+    result
+  );
+},getMyLiveMatches: async (
+  req: Request,
+  res: Response
+) => {
+  const userId = (req as any).user.userId;
+
+  const result =
+    await profileService.getUserLiveMatches(userId);
+
+  return sendResponse(
+    res,
+    200,
+    "My live matches fetched successfully",
+    result
+  );
+},
 };

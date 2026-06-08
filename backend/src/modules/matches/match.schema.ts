@@ -8,6 +8,7 @@ export const createMatchSchema = z.object({
   matchType: z.string().optional(),
   overs: z.number().int().positive(),
   matchNo: z.number().int().positive(),
+  matchMode: z.enum(["team", "1v1"]).default("team"),
   scheduledStartAt: z.string().optional(),
 });
 

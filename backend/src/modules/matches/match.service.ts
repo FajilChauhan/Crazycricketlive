@@ -5,6 +5,7 @@ import {
   AddBallBody,
   AddPlayingXIBody,
   CreateMatchBody,
+  SaveScoringStateBody,
   StartInningsBody,
   StatusBody,
   TossBody,
@@ -100,57 +101,104 @@ async function ensureScoreUpdateAccess(matchId: string, userId: string, db: Db =
 }
 
 export const matchService = {
-  createMatch: async (userId: string, body: CreateMatchBody) => {
-    const { tournamentId, team1Id, team2Id, groundName, matchType, overs, matchNo, scheduledStartAt } = body;
+ createMatch: async (userId: string, body: CreateMatchBody) => {
+  const { tournamentId, team1Id, team2Id, groundName, matchType, overs, matchNo, matchMode, scheduledStartAt } = body;
 
-    if (team1Id === team2Id) {
-      throw new ApiError(400, "Team 1 and Team 2 must be different");
-    }
+  if (team1Id === team2Id) {
+    throw new ApiError(400, "Team 1 and Team 2 must be different");
+  }
 
-    const [tournamentCheck, teamCheck] = await Promise.all([
-      pool.query<TournamentAccessRow>(
-        `SELECT tournament_id
-         FROM tournaments
-         WHERE tournament_id = $1 AND created_by_user_id = $2
-         LIMIT 1`,
-        [tournamentId, userId]
-      ),
-      pool.query(
-        `SELECT team_id
-         FROM teams
-         WHERE tournament_id = $1
-           AND team_id IN ($2, $3)`,
-        [tournamentId, team1Id, team2Id]
-      ),
-    ]);
+  const [tournamentCheck, teamCheck] = await Promise.all([
+    pool.query<TournamentAccessRow>(
+      `SELECT tournament_id
+       FROM tournaments
+       WHERE tournament_id = $1 AND created_by_user_id = $2
+       LIMIT 1`,
+      [tournamentId, userId]
+    ),
+    pool.query(
+      `SELECT team_id
+       FROM teams
+       WHERE tournament_id = $1
+         AND team_id IN ($2, $3)`,
+      [tournamentId, team1Id, team2Id]
+    ),
+  ]);
 
-    if (tournamentCheck.rows.length === 0) {
-      throw new ApiError(403, "Tournament not found or you are not authorized");
-    }
+  if (tournamentCheck.rows.length === 0) {
+    throw new ApiError(403, "Tournament not found or you are not authorized");
+  }
 
-    if (teamCheck.rows.length !== 2) {
-      throw new ApiError(404, "One or both teams not found in this tournament");
-    }
+  if (teamCheck.rows.length !== 2) {
+    throw new ApiError(404, "One or both teams not found in this tournament");
+  }
 
-    const result = await pool.query(
-      `INSERT INTO matches
-       (tournament_id, team1_id, team2_id, ground_name, match_type, overs, match_no, status, scheduled_start_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'upcoming', $8)
-       RETURNING *`,
-      [
-        tournamentId,
-        team1Id,
-        team2Id,
-        groundName,
-        matchType || "league",
-        overs,
-        matchNo,
-        scheduledStartAt || null,
-      ]
+  // ✅ Create match
+  const result = await pool.query(
+    `INSERT INTO matches
+     (tournament_id, team1_id, team2_id, ground_name, match_type, overs, match_no, match_mode, status, scheduled_start_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'upcoming', $9)
+     RETURNING *`,
+    [
+      tournamentId,
+      team1Id,
+      team2Id,
+      groundName,
+      matchType || "league",
+      overs,
+      matchNo,
+      matchMode || "team",
+      scheduledStartAt || null,
+    ]
+  );
+
+  const match = result.rows[0];
+
+  // ✅ Snapshot team members into match_players immediately
+  const [team1Members, team2Members] = await Promise.all([
+    pool.query(
+      `SELECT user_id FROM team_members
+       WHERE team_id = $1
+       ORDER BY is_captain DESC, joined_at ASC`,
+      [team1Id]
+    ),
+    pool.query(
+      `SELECT user_id FROM team_members
+       WHERE team_id = $1
+       ORDER BY is_captain DESC, joined_at ASC`,
+      [team2Id]
+    ),
+  ]);
+
+  const allMembers = [
+    ...team1Members.rows.map((r: any, i: number) => ({
+      userId: r.user_id,
+      teamId: team1Id,
+      order: i + 1,
+    })),
+    ...team2Members.rows.map((r: any, i: number) => ({
+      userId: r.user_id,
+      teamId: team2Id,
+      order: i + 1,
+    })),
+  ];
+
+  if (allMembers.length > 0) {
+    await Promise.all(
+      allMembers.map((m) =>
+        pool.query(
+          `INSERT INTO match_players
+           (match_id, team_id, user_id, batting_order, is_starting_player)
+           VALUES ($1, $2, $3, $4, true)
+           ON CONFLICT DO NOTHING`,
+          [match.match_id, m.teamId, m.userId, m.order]
+        )
+      )
     );
+  }
 
-    return result.rows[0];
-  },
+  return match;
+},
 
   getMatchesByTournament: async (tournamentId: string) => {
     const result = await pool.query(
@@ -194,19 +242,23 @@ export const matchService = {
     const [matchResult, inningsResult, playersResult] = await Promise.all([
       pool.query(
         `SELECT m.*,
-                t1.team_name AS team1_name,
-                t2.team_name AS team2_name,
-                tw.team_name AS toss_winner_team_name,
-                fb.team_name AS first_batting_team_name,
-                wn.team_name AS winner_team_name
-         FROM matches m
-         JOIN teams t1 ON m.team1_id = t1.team_id
-         JOIN teams t2 ON m.team2_id = t2.team_id
-         LEFT JOIN teams tw ON m.toss_winner_team_id = tw.team_id
-         LEFT JOIN teams fb ON m.first_batting_team_id = fb.team_id
-         LEFT JOIN teams wn ON m.winner_team_id = wn.team_id
-         WHERE m.match_id = $1
-         LIMIT 1`,
+        t1.team_name AS team1_name,
+        t2.team_name AS team2_name,
+        tw.team_name AS toss_winner_team_name,
+        fb.team_name AS first_batting_team_name,
+        wn.team_name AS winner_team_name,
+        tr.created_by_user_id AS tournament_created_by_user_id,
+        mom.username AS man_of_match_username
+ FROM matches m
+ JOIN teams t1 ON m.team1_id = t1.team_id
+ JOIN teams t2 ON m.team2_id = t2.team_id
+ LEFT JOIN teams tw ON m.toss_winner_team_id = tw.team_id
+ LEFT JOIN teams fb ON m.first_batting_team_id = fb.team_id
+ LEFT JOIN teams wn ON m.winner_team_id = wn.team_id
+ LEFT JOIN users mom ON m.man_of_the_match_user_id = mom.user_id
+ JOIN tournaments tr ON m.tournament_id = tr.tournament_id
+ WHERE m.match_id = $1
+ LIMIT 1`,
         [matchId]
       ),
       pool.query(
@@ -221,16 +273,22 @@ export const matchService = {
         [matchId]
       ),
       pool.query(
-        `SELECT mp.*,
-                u.username,
-                u.email,
-                u.profile_image
-         FROM match_players mp
-         JOIN users u ON mp.user_id = u.user_id
-         WHERE mp.match_id = $1
-         ORDER BY mp.team_id, mp.batting_order NULLS LAST, mp.created_at ASC`,
-        [matchId]
-      ),
+  `SELECT mp.*,
+          u.username,
+          u.email,
+          u.profile_image,
+          tm.is_captain,     
+          tm.role AS member_role,
+          tm.jersey_number
+   FROM match_players mp
+   JOIN users u ON mp.user_id = u.user_id
+   LEFT JOIN team_members tm
+     ON tm.user_id = mp.user_id
+     AND tm.team_id = mp.team_id
+   WHERE mp.match_id = $1
+   ORDER BY mp.team_id, mp.batting_order NULLS LAST, mp.created_at ASC`,
+  [matchId]
+),
     ]);
 
     if (matchResult.rows.length === 0) {
@@ -339,20 +397,35 @@ export const matchService = {
   },
 
   updateStatus: async (matchId: string, userId: string, body: StatusBody) => {
-    await ensureMatchOwnerOrAdmin(matchId, userId);
+  await ensureMatchOwnerOrAdmin(matchId, userId);
 
-    const result = await pool.query(
-      `UPDATE matches
-       SET status = $1,
-           started_at = CASE WHEN $1 = 'live' THEN COALESCE(started_at, NOW()) ELSE started_at END,
-           ended_at = CASE WHEN $1 = 'completed' THEN NOW() ELSE ended_at END
-       WHERE match_id = $2
-       RETURNING *`,
-      [body.status, matchId]
+  // status comes as lowercase from frontend — matches DB constraint
+  await pool.query(
+    `UPDATE matches SET status = $1 WHERE match_id = $2`,
+    [body.status, matchId]
+  );
+
+  if (body.status === "live") {
+    await pool.query(
+      `UPDATE matches SET started_at = COALESCE(started_at, NOW()) WHERE match_id = $1`,
+      [matchId]
     );
+  }
 
-    return result.rows[0];
-  },
+  if (body.status === "completed") {
+    await pool.query(
+      `UPDATE matches SET ended_at = NOW() WHERE match_id = $1`,
+      [matchId]
+    );
+  }
+
+  const result = await pool.query(
+    `SELECT * FROM matches WHERE match_id = $1`,
+    [matchId]
+  );
+
+  return result.rows[0];
+},
 
   addPlayingXI: async (matchId: string, userId: string, body: AddPlayingXIBody) => {
     await ensureMatchOwnerOrAdmin(matchId, userId);
@@ -430,41 +503,64 @@ export const matchService = {
   },
 
   startInnings: async (matchId: string, userId: string, body: StartInningsBody) => {
-    await ensureScoreUpdateAccess(matchId, userId);
+  await ensureScoreUpdateAccess(matchId, userId);
 
-    const match = await getMatchOrThrow(matchId);
+  const match = await getMatchOrThrow(matchId);
 
-    if (match.status === "completed" || match.status === "cancelled" || match.status === "abandoned") {
-      throw new ApiError(400, "Cannot start innings for a closed match");
-    }
+  if (
+    match.status === "completed" ||
+    match.status === "cancelled" ||
+    match.status === "abandoned"
+  ) {
+    throw new ApiError(400, "Cannot start innings for a closed match");
+  }
 
-    if (body.battingTeamId === body.bowlingTeamId) {
-      throw new ApiError(400, "Batting and bowling teams must be different");
-    }
+  if (body.battingTeamId === body.bowlingTeamId) {
+    throw new ApiError(400, "Batting and bowling teams must be different");
+  }
 
-    const teamCheck = await pool.query(
-      `SELECT team_id
-       FROM matches
-       WHERE match_id = $1
-         AND (team1_id = $2 OR team2_id = $2)
-         AND (team1_id = $3 OR team2_id = $3)`,
-      [matchId, body.battingTeamId, body.bowlingTeamId]
+  // ✅ FIX — use match1_id/team2_id correctly
+  const isTeam1Batting =
+    body.battingTeamId === match.team1_id ||
+    body.battingTeamId === match.team2_id;
+
+  const isTeam1Bowling =
+    body.bowlingTeamId === match.team1_id ||
+    body.bowlingTeamId === match.team2_id;
+
+  if (!isTeam1Batting || !isTeam1Bowling) {
+    throw new ApiError(400, "Batting or bowling team is not part of this match");
+  }
+
+  let targetRuns = body.targetRuns || null;
+
+  // ✅ Auto-calculate target from innings 1 when starting innings 2
+  if (body.inningsNo >= 2) {
+    const inn1Result = await pool.query(
+      `SELECT runs FROM innings WHERE match_id = $1 AND innings_no = 1 AND is_completed = true LIMIT 1`,
+      [matchId]
     );
-
-    if (teamCheck.rows.length === 0) {
-      throw new ApiError(400, "Batting or bowling team is not part of this match");
+    if (inn1Result.rows.length > 0) {
+      targetRuns = inn1Result.rows[0].runs + 1; // need 1 more than innings 1 total
     }
+  }
 
-    const result = await pool.query(
-      `INSERT INTO innings
-       (match_id, innings_no, batting_team_id, bowling_team_id, target_runs)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [matchId, body.inningsNo, body.battingTeamId, body.bowlingTeamId, body.targetRuns || null]
-    );
+  const result = await pool.query(
+    `INSERT INTO innings
+     (match_id, innings_no, batting_team_id, bowling_team_id, target_runs)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING *`,
+    [
+      matchId,
+      body.inningsNo,
+      body.battingTeamId,
+      body.bowlingTeamId,
+      targetRuns,
+    ]
+  );
 
-    return result.rows[0];
-  },
+  return result.rows[0];
+},
 
   endInnings: async (matchId: string, userId: string, inningsId: string) => {
     await ensureScoreUpdateAccess(matchId, userId);
@@ -703,30 +799,46 @@ export const matchService = {
     };
   },
 
-  getBattingScorecard: async (matchId: string) => {
+  getBattingScorecard: async (matchId: string, inningsId?: string) => {
+    const params: any[] = [matchId];
+    let inningsFilter = "";
+    if (inningsId) {
+      params.push(inningsId);
+      inningsFilter = `AND bb.innings_id = $${params.length}`;
+    }
     const result = await pool.query(
       `SELECT bb.striker_id AS user_id,
               u.username,
+              bb.innings_id,
               COALESCE(SUM(bb.runs_scored), 0)::int AS runs,
               COUNT(*) FILTER (WHERE bb.is_legal_delivery = true)::int AS balls,
               COALESCE(SUM(CASE WHEN bb.runs_scored = 4 THEN 1 ELSE 0 END), 0)::int AS fours,
-              COALESCE(SUM(CASE WHEN bb.runs_scored = 6 THEN 1 ELSE 0 END), 0)::int AS sixes
+              COALESCE(SUM(CASE WHEN bb.runs_scored = 6 THEN 1 ELSE 0 END), 0)::int AS sixes,
+              MAX(CASE WHEN bb.is_wicket = true THEN 1 ELSE 0 END)::int AS is_out
        FROM ball_by_ball bb
        LEFT JOIN users u ON bb.striker_id = u.user_id
        WHERE bb.match_id = $1
          AND bb.striker_id IS NOT NULL
-       GROUP BY bb.striker_id, u.username
-       ORDER BY runs DESC, balls ASC`,
-      [matchId]
+         ${inningsFilter}
+       GROUP BY bb.striker_id, u.username, bb.innings_id
+       ORDER BY bb.innings_id, runs DESC, balls ASC`,
+      params
     );
 
     return result.rows;
   },
 
-  getBowlingScorecard: async (matchId: string) => {
+  getBowlingScorecard: async (matchId: string, inningsId?: string) => {
+    const params: any[] = [matchId];
+    let inningsFilter = "";
+    if (inningsId) {
+      params.push(inningsId);
+      inningsFilter = `AND bb.innings_id = $${params.length}`;
+    }
     const result = await pool.query(
       `SELECT bb.bowler_id AS user_id,
               u.username,
+              bb.innings_id,
               COUNT(*) FILTER (WHERE bb.is_legal_delivery = true)::int AS balls,
               COALESCE(SUM(bb.runs_scored + bb.extra_runs), 0)::int AS runs_conceded,
               COALESCE(SUM(CASE WHEN bb.is_wicket = true THEN 1 ELSE 0 END), 0)::int AS wickets
@@ -734,9 +846,10 @@ export const matchService = {
        LEFT JOIN users u ON bb.bowler_id = u.user_id
        WHERE bb.match_id = $1
          AND bb.bowler_id IS NOT NULL
-       GROUP BY bb.bowler_id, u.username
-       ORDER BY wickets DESC, runs_conceded ASC`,
-      [matchId]
+         ${inningsFilter}
+       GROUP BY bb.bowler_id, u.username, bb.innings_id
+       ORDER BY bb.innings_id, wickets DESC, runs_conceded ASC`,
+      params
     );
 
     return result.rows;
@@ -841,23 +954,97 @@ export const matchService = {
               m.overs,
               m.match_no,
               m.created_at,
+              m.winner_team_id,
+              m.started_at,
+              m.ended_at,
               tr.tournament_id,
               tr.tournament_name,
               t1.team_name AS team1_name,
+              t1.team_id   AS team1_id,
               t2.team_name AS team2_name,
-              mp.team_id AS player_team_id
+              t2.team_id   AS team2_id,
+              wn.team_name AS winner_team_name,
+              -- determine which team player belongs to in this match
+              COALESCE(mp.team_id, tm.team_id) AS player_team_id,
+              COALESCE(
+                CASE WHEN mp.team_id = m.team1_id THEN t1.team_name
+                     WHEN mp.team_id = m.team2_id THEN t2.team_name END,
+                CASE WHEN tm.team_id = m.team1_id THEN t1.team_name
+                     WHEN tm.team_id = m.team2_id THEN t2.team_name END
+              ) AS player_team_name
        FROM matches m
-       JOIN match_players mp ON m.match_id = mp.match_id
        JOIN tournaments tr ON m.tournament_id = tr.tournament_id
        JOIN teams t1 ON m.team1_id = t1.team_id
        JOIN teams t2 ON m.team2_id = t2.team_id
-       WHERE mp.user_id = $1
+       LEFT JOIN teams wn ON m.winner_team_id = wn.team_id
+       -- via playing XI
+       LEFT JOIN match_players mp ON m.match_id = mp.match_id AND mp.user_id = $1
+       -- via team membership (catches matches where playing XI wasn't set)
+       LEFT JOIN team_members tm ON (tm.team_id = m.team1_id OR tm.team_id = m.team2_id)
+                                  AND tm.user_id = $1
+       WHERE (
+         mp.user_id = $1
+         OR tm.user_id = $1
+         -- also find via actual balls bowled/batted
+         OR EXISTS (
+           SELECT 1 FROM ball_by_ball bbb
+           JOIN innings i ON bbb.innings_id = i.innings_id
+           WHERE i.match_id = m.match_id
+             AND (bbb.striker_id = $1 OR bbb.bowler_id = $1 OR bbb.non_striker_id = $1)
+         )
+       )
        ORDER BY m.created_at DESC`,
       [userId]
     );
 
     return result.rows;
   },
+
+
+  // In match.service.ts
+declareWinner: async (matchId: string, userId: string, body: {
+  winnerTeamId: string;
+  winMargin?: number;
+  winType?: string;
+  manOfTheMatchUserId?: string;
+}) => {
+  await ensureMatchOwnerOrAdmin(matchId, userId);
+
+  // Try to save MOTM — gracefully skip if column doesn't exist yet
+  try {
+    if (body.manOfTheMatchUserId) {
+      await pool.query(
+        `UPDATE matches SET man_of_the_match_user_id = $1 WHERE match_id = $2`,
+        [body.manOfTheMatchUserId, matchId]
+      );
+    }
+  } catch (_) { /* column may not exist yet */ }
+
+  const result = await pool.query(
+    `UPDATE matches
+     SET winner_team_id = $1,
+         status = 'completed',
+         ended_at = NOW()
+     WHERE match_id = $2
+     RETURNING *`,
+    [body.winnerTeamId, matchId]
+  );
+  return result.rows[0];
+},
+
+declareTie: async (matchId: string, userId: string) => {
+  await ensureMatchOwnerOrAdmin(matchId, userId);
+
+  const result = await pool.query(
+    `UPDATE matches
+     SET status = 'completed',
+         ended_at = NOW()
+     WHERE match_id = $1
+     RETURNING *`,
+    [matchId]
+  );
+  return result.rows[0];
+},
 
   getPlayerStats: async (userId: string) => {
     const [matchesPlayedResult, totalRunsResult, totalWicketsResult, createdTournamentsResult, createdTeamsResult] =
@@ -902,4 +1089,73 @@ export const matchService = {
       createdTeams: createdTeamsResult.rows[0].count,
     };
   },
+  getScoringState: async (matchId: string) => {
+  const result = await pool.query(
+    `SELECT
+       mss.*,
+       s.username  AS striker_username,
+       ns.username AS non_striker_username,
+       b.username  AS bowler_username,
+       ob.username AS out_batsman_username
+     FROM match_scoring_state mss
+     LEFT JOIN users s  ON mss.striker_id     = s.user_id
+     LEFT JOIN users ns ON mss.non_striker_id  = ns.user_id
+     LEFT JOIN users b  ON mss.bowler_id       = b.user_id
+     LEFT JOIN users ob ON mss.out_batsman_id  = ob.user_id
+     WHERE mss.match_id = $1
+     LIMIT 1`,
+    [matchId]
+  );
+
+  return result.rows[0] ?? null;
+},
+
+saveScoringState: async (matchId: string, userId: string, body: SaveScoringStateBody) => {
+  await ensureScoreUpdateAccess(matchId, userId);
+
+  const result = await pool.query(
+    `INSERT INTO match_scoring_state
+       (match_id, phase, striker_id, non_striker_id, bowler_id,
+        out_batsman_id, retired_ids, dismissed_ids,
+        new_batsman_reason, wicket_was_last_ball, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW())
+     ON CONFLICT (match_id) DO UPDATE SET
+       phase                = EXCLUDED.phase,
+       striker_id           = EXCLUDED.striker_id,
+       non_striker_id       = EXCLUDED.non_striker_id,
+       bowler_id            = EXCLUDED.bowler_id,
+       out_batsman_id       = EXCLUDED.out_batsman_id,
+       retired_ids          = EXCLUDED.retired_ids,
+       dismissed_ids        = EXCLUDED.dismissed_ids,   -- ✅
+       new_batsman_reason   = EXCLUDED.new_batsman_reason,
+       wicket_was_last_ball = EXCLUDED.wicket_was_last_ball,
+       updated_at           = NOW()
+     RETURNING *`,
+    [
+      matchId,
+      body.phase,
+      body.strikerId    || null,
+      body.nonStrikerId || null,
+      body.bowlerId     || null,
+      body.outBatsmanId || null,
+      body.retiredIds   ?? [],
+      body.dismissedIds ?? [],     // ✅
+      body.newBatsmanReason ?? "wicket",
+      body.wicketWasLastBall ?? false,
+    ]
+  );
+
+  return result.rows[0];
+},
+
+clearScoringState: async (matchId: string, userId: string) => {
+  await ensureScoreUpdateAccess(matchId, userId);
+
+  await pool.query(
+    `DELETE FROM match_scoring_state WHERE match_id = $1`,
+    [matchId]
+  );
+
+  return { success: true };
+},
 };

@@ -209,25 +209,58 @@ export const tournamentService = {
           [tournamentId]
         ),
 
-        pool.query<PointsRow>(
-          `SELECT pt.points_table_id,
-                  pt.tournament_id,
-                  pt.team_id,
-                  tm.team_name,
-                  pt.matches_played,
-                  pt.wins,
-                  pt.losses,
-                  pt.ties,
-                  pt.no_results,
-                  pt.points,
-                  pt.net_run_rate,
-                  pt.updated_at
-           FROM points_table pt
-           JOIN teams tm ON pt.team_id = tm.team_id
-           WHERE pt.tournament_id = $1
-           ORDER BY pt.points DESC, pt.net_run_rate DESC, tm.team_name ASC`,
+        pool.query(
+          `WITH match_results AS (
+             SELECT
+               m.match_id,
+               m.team1_id,
+               m.team2_id,
+               m.winner_team_id,
+               m.status
+             FROM matches m
+             WHERE m.tournament_id = $1
+               AND m.status = 'completed'
+           )
+           SELECT
+             t.team_id,
+             t.team_name,
+             COUNT(DISTINCT
+               CASE WHEN mr.team1_id = t.team_id OR mr.team2_id = t.team_id
+                    THEN mr.match_id END
+             )::int AS matches_played,
+             COUNT(DISTINCT
+               CASE WHEN mr.winner_team_id = t.team_id
+                    THEN mr.match_id END
+             )::int AS wins,
+             COUNT(DISTINCT
+               CASE WHEN (mr.team1_id = t.team_id OR mr.team2_id = t.team_id)
+                         AND mr.winner_team_id IS NOT NULL
+                         AND mr.winner_team_id != t.team_id
+                    THEN mr.match_id END
+             )::int AS losses,
+             COUNT(DISTINCT
+               CASE WHEN (mr.team1_id = t.team_id OR mr.team2_id = t.team_id)
+                         AND mr.winner_team_id IS NULL
+                    THEN mr.match_id END
+             )::int AS ties,
+             0::int AS no_results,
+             (
+               COUNT(DISTINCT CASE WHEN mr.winner_team_id = t.team_id THEN mr.match_id END) * 2
+               +
+               COUNT(DISTINCT CASE WHEN (mr.team1_id = t.team_id OR mr.team2_id = t.team_id)
+                                        AND mr.winner_team_id IS NULL
+                                   THEN mr.match_id END) * 1
+             )::int AS points,
+             0.000::numeric AS net_run_rate
+           FROM teams t
+           LEFT JOIN match_results mr
+             ON mr.team1_id = t.team_id OR mr.team2_id = t.team_id
+           WHERE t.tournament_id = $1
+           GROUP BY t.team_id, t.team_name
+           ORDER BY points DESC, team_name ASC`,
           [tournamentId]
         ),
+
       ]);
 
     if (tournamentResult.rows.length === 0) {

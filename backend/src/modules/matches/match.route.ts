@@ -34,6 +34,8 @@ router.get("/tournament/:tournamentId", authenticateToken, asyncHandler(matchCon
 router.get("/:matchId", authenticateToken, asyncHandler(matchController.getMatchById));
 router.put("/:matchId", authenticateToken, validateBody(updateMatchSchema), asyncHandler(matchController.updateMatch));
 router.delete("/:matchId", authenticateToken, asyncHandler(matchController.deleteMatch));
+router.put("/:matchId/winner", authenticateToken, asyncHandler(matchController.declareWinner));
+router.put("/:matchId/tie", authenticateToken, asyncHandler(matchController.declareTie));
 
 router.put("/:matchId/toss", authenticateToken, validateBody(tossSchema), asyncHandler(matchController.updateToss));
 router.put("/:matchId/status", authenticateToken, validateBody(statusSchema), asyncHandler(matchController.updateStatus));
@@ -58,4 +60,7 @@ router.get("/:matchId/player-status", authenticateToken, asyncHandler(matchContr
 router.get("/players/:userId/history", authenticateToken, asyncHandler(matchController.getPlayerHistory));
 router.get("/players/:userId/stats", authenticateToken, asyncHandler(matchController.getPlayerStats));
 
+router.get("/:matchId/scoring-state", authenticateToken, asyncHandler(matchController.getScoringState));
+router.put("/:matchId/scoring-state", authenticateToken, asyncHandler(matchController.saveScoringState));
+router.delete("/:matchId/scoring-state", authenticateToken, asyncHandler(matchController.clearScoringState));
 export default router;
