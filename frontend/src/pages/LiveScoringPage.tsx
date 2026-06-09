@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { matchService } from "../services/match.service";
+import { useMatchSocket } from "../hooks/useMatchSocket";
 
 interface TeamMember {
   team_member_id: string;
@@ -456,6 +457,9 @@ const LiveScoringPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  // Real-time updates via WebSockets
+  useMatchSocket(matchId);
+
   const [pendingRuns, setPendingRuns] = useState<number | null>(null);
   const [selectedExtra, setSelectedExtra] = useState<ExtraType | null>(null);
   const [isWicket, setIsWicket] = useState(false);
@@ -481,8 +485,6 @@ const LiveScoringPage = () => {
     queryKey: ["match", matchId],
     queryFn: () => matchService.getById(matchId!),
     enabled: !!matchId,
-    refetchInterval: 3000,
-    refetchOnWindowFocus: true,
   });
 
   const { data: ballsData = [], refetch: refetchBalls } = useQuery({
@@ -789,7 +791,7 @@ useEffect(() => {
             await clearState();
             queryClient.invalidateQueries({ queryKey: ["match", matchId] });
             toast.success(`Innings complete! ${match?.overs} overs done.`);
-            navigate(`/matches/${matchId}`);
+            navigate(`/matches/${matchId}`, { replace: true });
           } catch (e: any) {
             toast.error(e?.response?.data?.message || "Failed to end innings");
           }
@@ -949,12 +951,12 @@ useEffect(() => {
             await autoDeclareWinner("", "tie");
           }
         } else {
-          navigate(`/matches/${matchId}`);
+          navigate(`/matches/${matchId}`, { replace: true });
         }
       } else {
         queryClient.invalidateQueries({ queryKey: ["match", matchId] });
         toast.success("All out! Innings ended.");
-        navigate(`/matches/${matchId}`);
+        navigate(`/matches/${matchId}`, { replace: true });
       }
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Failed");
@@ -1025,8 +1027,8 @@ useEffect(() => {
         innings={freshMatchData?.innings ?? innings}
         match={freshMatchData?.match ?? match}
         allPlayers={allPlayers}
-        onClose={() => { setShowMatchEnd(false); navigate(`/matches/${matchId}`); }}
-        onDone={() => { setShowMatchEnd(false); navigate(`/matches/${matchId}`); }}
+        onClose={() => { setShowMatchEnd(false); navigate(`/matches/${matchId}`, { replace: true }); }}
+        onDone={() => { setShowMatchEnd(false); navigate(`/matches/${matchId}`, { replace: true }); }}
       />
     );
   }
@@ -1398,7 +1400,7 @@ useEffect(() => {
                   setShowMatchEnd(true);
                 } else {
                   toast.success("Innings ended");
-                  navigate(`/matches/${matchId}`);
+                  navigate(`/matches/${matchId}`, { replace: true });
                 }
               } catch (e: any) {
                 toast.error(e?.response?.data?.message || "Failed");

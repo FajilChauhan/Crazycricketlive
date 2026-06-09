@@ -59,7 +59,7 @@ const Navbar = () => {
             </div>
             <div className="hidden sm:block">
               <h1 className="text-white font-semibold text-[16px] tracking-tight leading-none">
-                GullyCricketLive
+                CrazyCricketLive
               </h1>
               <p className="text-white/35 text-[10px] mt-0.5">Live matches · Tournaments</p>
             </div>

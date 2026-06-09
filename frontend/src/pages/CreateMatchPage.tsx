@@ -84,7 +84,7 @@ const CreateMatchPage = () => {
       queryClient.invalidateQueries({ queryKey: ["tournament", tournamentId] });
       toast.success("Match created!");
       const matchId = res?.match_id ?? res?.matchId;
-      navigate(matchId ? `/matches/${matchId}` : `/tournaments/${tournamentId}`);
+      navigate(matchId ? `/matches/${matchId}` : `/tournaments/${tournamentId}`, { replace: true });
     },
     onError: (err: any) => {
       toast.error(err?.response?.data?.message || "Failed to create match");
@@ -281,7 +281,6 @@ const CreateMatchPage = () => {
         <div>
           <label className="block text-sm font-medium text-white/60 mb-2">
             Match Date & Time
-            <span className="text-red-400">*</span>
           </label>
 
           <input
@@ -290,8 +289,6 @@ const CreateMatchPage = () => {
             className={`w-full bg-[#111] border rounded-xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-green-500/50 transition-all [color-scheme:dark]
             ${
               errors.scheduledStartAt
-                ? "border-red-500/50"
-                : "border-white/[0.08]"
             }`}
           />
 

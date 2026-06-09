@@ -339,12 +339,12 @@ const DashboardPage = () => {
                   {greeting()}, {user.username} 👋
                 </h1>
                 <p className="text-white/30 text-sm mt-0.5">
-                  Here's what's happening in cricket today
+                  Here's what's happening in crazycricketlive with Safnam
                 </p>
               </>
             ) : (
               <>
-                <h1 className="text-white text-xl font-bold tracking-tight">🏏 GullyCricketLive</h1>
+                <h1 className="text-white text-xl font-bold tracking-tight">🏏 CrazyCricketLive</h1>
                 <p className="text-white/30 text-sm mt-0.5">Live scores · Tournaments · Stats</p>
               </>
             )}

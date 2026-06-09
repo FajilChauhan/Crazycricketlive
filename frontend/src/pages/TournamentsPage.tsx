@@ -85,13 +85,6 @@ const TournamentsPage = () => {
   );
 };
 
-const statusConfig: Record<string, string> = {
-  draft:     "bg-white/5 text-white/40 border-white/10",
-  active:    "bg-green-500/15 text-green-400 border-green-500/25",
-  completed: "bg-white/5 text-white/30 border-white/10",
-  archived:  "bg-white/5 text-white/20 border-white/10",
-};
-
 const TournamentCard = ({
   tournament: t,
   onClick,
@@ -113,12 +106,6 @@ const TournamentCard = ({
         </p>
         <p className="text-white/35 text-sm truncate">{t.organization_name}</p>
       </div>
-    </div>
-
-    <div className="flex items-center gap-4 flex-shrink-0">
-      <span className="text-white/20 text-xs hidden sm:block">
-        by {t.created_by_username}
-      </span>
     </div>
   </div>
 );

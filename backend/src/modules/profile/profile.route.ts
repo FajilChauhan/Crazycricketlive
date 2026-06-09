@@ -68,37 +68,31 @@ router.get(
 
 router.get(
   "/:userId",
-  authenticateToken,
   asyncHandler(profileController.getProfileById)
 );
 
 router.get(
   "/:userId/tournaments",
-  authenticateToken,
   asyncHandler(profileController.getUserTournaments)
 );
 
 router.get(
   "/:userId/teams",
-  authenticateToken,
   asyncHandler(profileController.getUserTeams)
 );
 
 router.get(
   "/:userId/matches",
-  authenticateToken,
   asyncHandler(profileController.getUserMatches)
 );
 
 router.get(
   "/:userId/live-matches",
-  authenticateToken,
   asyncHandler(profileController.getUserLiveMatches)
 );
 
 router.get(
   "/:userId/stats",
-  authenticateToken,
   asyncHandler(profileController.getUserStats)
 );
 

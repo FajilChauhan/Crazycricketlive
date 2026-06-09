@@ -30,11 +30,10 @@ router.post(
   asyncHandler(teamController.createTeam)
 );
 
-router.get("/my", authenticateToken, asyncHandler(teamController.getMyTeams));
+router.get("/my", asyncHandler(teamController.getMyTeams));
 
 router.get(
   "/:teamId",
-  authenticateToken,
   asyncHandler(teamController.getTeamById)
 );
 

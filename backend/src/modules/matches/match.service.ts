@@ -1,6 +1,8 @@
 import { pool } from "../../config/dbconfig";
 import { ApiError } from "../../shared/utils/ApiError";
 import { withTransaction } from "../../shared/utils/withTransaction";
+import { getCache, setCache, deleteCache } from "../../config/redis";
+import { emitToMatch } from "../../socket";
 import {
   AddBallBody,
   AddPlayingXIBody,
@@ -11,6 +13,7 @@ import {
   TossBody,
   UpdateMatchBody,
 } from "./match.types";
+
 
 type Db = {
   query: (text: string, params?: any[]) => Promise<{ rows: any[] }>;
@@ -51,18 +54,10 @@ async function ensureMatchOwnerOrAdmin(matchId: string, userId: string, db: Db =
     `SELECT 1
      FROM tournaments t
      WHERE t.tournament_id = $1
-       AND (
+       AND 
          t.created_by_user_id = $2
-         OR EXISTS (
-           SELECT 1
-           FROM match_permissions mp
-           WHERE mp.match_id = $3
-             AND mp.user_id = $2
-             AND mp.permission_type = 'match_admin'
-         )
-       )
      LIMIT 1`,
-    [match.tournament_id, userId, matchId]
+    [match.tournament_id, userId]
   );
 
   if (accessCheck.rows.length === 0) {
@@ -79,18 +74,9 @@ async function ensureScoreUpdateAccess(matchId: string, userId: string, db: Db =
     `SELECT 1
      FROM tournaments t
      WHERE t.tournament_id = $1
-       AND (
-         t.created_by_user_id = $2
-         OR EXISTS (
-           SELECT 1
-           FROM match_permissions mp
-           WHERE mp.match_id = $3
-             AND mp.user_id = $2
-             AND mp.permission_type IN ('score_update', 'match_admin')
-         )
-       )
+       AND t.created_by_user_id = $2
      LIMIT 1`,
-    [match.tournament_id, userId, matchId]
+    [match.tournament_id, userId]
   );
 
   if (accessCheck.rows.length === 0) {
@@ -353,13 +339,22 @@ export const matchService = {
       values
     );
 
-    return result.rows[0];
+    const updatedMatch = result.rows[0];
+    if (updatedMatch) {
+      await deleteCache(`live_score:${matchId}`);
+      emitToMatch(matchId, "score_updated", { matchId });
+    }
+
+    return updatedMatch;
   },
 
   deleteMatch: async (matchId: string, userId: string) => {
     await ensureMatchOwnerOrAdmin(matchId, userId);
 
     await pool.query(`DELETE FROM matches WHERE match_id = $1`, [matchId]);
+    await deleteCache(`live_score:${matchId}`);
+    await deleteCache(`scoring_state:${matchId}`);
+    emitToMatch(matchId, "match_deleted", { matchId });
 
     return { message: "Match deleted successfully" };
   },
@@ -393,7 +388,11 @@ export const matchService = {
       [tossWinnerTeamId, tossDecision, firstBattingTeamId, matchId]
     );
 
-    return result.rows[0];
+    const updatedMatch = result.rows[0];
+    await deleteCache(`live_score:${matchId}`);
+    emitToMatch(matchId, "score_updated", { matchId });
+
+    return updatedMatch;
   },
 
   updateStatus: async (matchId: string, userId: string, body: StatusBody) => {
@@ -424,7 +423,11 @@ export const matchService = {
     [matchId]
   );
 
-  return result.rows[0];
+  const updatedMatch = result.rows[0];
+  await deleteCache(`live_score:${matchId}`);
+  emitToMatch(matchId, "score_updated", { matchId });
+
+  return updatedMatch;
 },
 
   addPlayingXI: async (matchId: string, userId: string, body: AddPlayingXIBody) => {
@@ -559,7 +562,11 @@ export const matchService = {
     ]
   );
 
-  return result.rows[0];
+  const innings = result.rows[0];
+  await deleteCache(`live_score:${matchId}`);
+  emitToMatch(matchId, "score_updated", { matchId });
+
+  return innings;
 },
 
   endInnings: async (matchId: string, userId: string, inningsId: string) => {
@@ -577,7 +584,11 @@ export const matchService = {
       throw new ApiError(404, "Innings not found");
     }
 
-    return result.rows[0];
+    const innings = result.rows[0];
+    await deleteCache(`live_score:${matchId}`);
+    emitToMatch(matchId, "score_updated", { matchId });
+
+    return innings;
   },
 
   getInnings: async (matchId: string) => {
@@ -640,7 +651,7 @@ export const matchService = {
         `SELECT COALESCE(MAX(delivery_number), 0)::int AS max_delivery
          FROM ball_by_ball
          WHERE innings_id = $1`,
-        [body.inningsId]
+         [body.inningsId]
       );
 
       const nextDeliveryNumber = (maxDeliveryResult.rows[0].max_delivery || 0) + 1;
@@ -705,6 +716,9 @@ export const matchService = {
       };
     });
 
+    await deleteCache(`live_score:${matchId}`);
+    emitToMatch(matchId, "score_updated", { matchId });
+
     return result;
   },
 
@@ -721,6 +735,16 @@ export const matchService = {
   },
 
   getLiveScore: async (matchId: string) => {
+    const cacheKey = `live_score:${matchId}`;
+    const cachedData = await getCache(cacheKey);
+    if (cachedData) {
+      try {
+        return JSON.parse(cachedData);
+      } catch (err) {
+        // Fallback to querying DB if parse fails
+      }
+    }
+
     const [matchResult, inningsResult, lastBallsResult] = await Promise.all([
       pool.query(
         `SELECT m.*,
@@ -764,11 +788,15 @@ export const matchService = {
       throw new ApiError(404, "Match not found");
     }
 
-    return {
+    const liveScore = {
       match: matchResult.rows[0],
       innings: inningsResult.rows,
       lastBalls: lastBallsResult.rows,
     };
+
+    await setCache(cacheKey, JSON.stringify(liveScore), 300);
+
+    return liveScore;
   },
 
   getScorecard: async (matchId: string) => {
@@ -1029,7 +1057,12 @@ declareWinner: async (matchId: string, userId: string, body: {
      RETURNING *`,
     [body.winnerTeamId, matchId]
   );
-  return result.rows[0];
+
+  const updatedMatch = result.rows[0];
+  await deleteCache(`live_score:${matchId}`);
+  emitToMatch(matchId, "score_updated", { matchId });
+
+  return updatedMatch;
 },
 
 declareTie: async (matchId: string, userId: string) => {
@@ -1043,7 +1076,12 @@ declareTie: async (matchId: string, userId: string) => {
      RETURNING *`,
     [matchId]
   );
-  return result.rows[0];
+
+  const updatedMatch = result.rows[0];
+  await deleteCache(`live_score:${matchId}`);
+  emitToMatch(matchId, "score_updated", { matchId });
+
+  return updatedMatch;
 },
 
   getPlayerStats: async (userId: string) => {
@@ -1089,26 +1127,41 @@ declareTie: async (matchId: string, userId: string) => {
       createdTeams: createdTeamsResult.rows[0].count,
     };
   },
-  getScoringState: async (matchId: string) => {
-  const result = await pool.query(
-    `SELECT
-       mss.*,
-       s.username  AS striker_username,
-       ns.username AS non_striker_username,
-       b.username  AS bowler_username,
-       ob.username AS out_batsman_username
-     FROM match_scoring_state mss
-     LEFT JOIN users s  ON mss.striker_id     = s.user_id
-     LEFT JOIN users ns ON mss.non_striker_id  = ns.user_id
-     LEFT JOIN users b  ON mss.bowler_id       = b.user_id
-     LEFT JOIN users ob ON mss.out_batsman_id  = ob.user_id
-     WHERE mss.match_id = $1
-     LIMIT 1`,
-    [matchId]
-  );
 
-  return result.rows[0] ?? null;
-},
+  getScoringState: async (matchId: string) => {
+    const cacheKey = `scoring_state:${matchId}`;
+    const cachedData = await getCache(cacheKey);
+    if (cachedData) {
+      try {
+        return JSON.parse(cachedData);
+      } catch (err) {
+        // Fallback
+      }
+    }
+
+    const result = await pool.query(
+      `SELECT
+         mss.*,
+         s.username  AS striker_username,
+         ns.username AS non_striker_username,
+         b.username  AS bowler_username,
+         ob.username AS out_batsman_username
+       FROM match_scoring_state mss
+       LEFT JOIN users s  ON mss.striker_id     = s.user_id
+       LEFT JOIN users ns ON mss.non_striker_id  = ns.user_id
+       LEFT JOIN users b  ON mss.bowler_id       = b.user_id
+       LEFT JOIN users ob ON mss.out_batsman_id  = ob.user_id
+       WHERE mss.match_id = $1
+       LIMIT 1`,
+      [matchId]
+    );
+
+    const state = result.rows[0] ?? null;
+    if (state) {
+      await setCache(cacheKey, JSON.stringify(state), 300);
+    }
+    return state;
+  },
 
 saveScoringState: async (matchId: string, userId: string, body: SaveScoringStateBody) => {
   await ensureScoreUpdateAccess(matchId, userId);
@@ -1126,7 +1179,7 @@ saveScoringState: async (matchId: string, userId: string, body: SaveScoringState
        bowler_id            = EXCLUDED.bowler_id,
        out_batsman_id       = EXCLUDED.out_batsman_id,
        retired_ids          = EXCLUDED.retired_ids,
-       dismissed_ids        = EXCLUDED.dismissed_ids,   -- ✅
+       dismissed_ids        = EXCLUDED.dismissed_ids,
        new_batsman_reason   = EXCLUDED.new_batsman_reason,
        wicket_was_last_ball = EXCLUDED.wicket_was_last_ball,
        updated_at           = NOW()
@@ -1139,13 +1192,17 @@ saveScoringState: async (matchId: string, userId: string, body: SaveScoringState
       body.bowlerId     || null,
       body.outBatsmanId || null,
       body.retiredIds   ?? [],
-      body.dismissedIds ?? [],     // ✅
+      body.dismissedIds ?? [],
       body.newBatsmanReason ?? "wicket",
       body.wicketWasLastBall ?? false,
     ]
   );
 
-  return result.rows[0];
+  const state = result.rows[0];
+  await setCache(`scoring_state:${matchId}`, JSON.stringify(state), 300);
+  emitToMatch(matchId, "scoring_state_updated", state);
+
+  return state;
 },
 
 clearScoringState: async (matchId: string, userId: string) => {
@@ -1155,6 +1212,9 @@ clearScoringState: async (matchId: string, userId: string) => {
     `DELETE FROM match_scoring_state WHERE match_id = $1`,
     [matchId]
   );
+
+  await deleteCache(`scoring_state:${matchId}`);
+  emitToMatch(matchId, "scoring_state_cleared", { matchId });
 
   return { success: true };
 },

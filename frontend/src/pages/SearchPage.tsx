@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Search, Trophy, Users, Activity,
-  User, X, Clock
+  User, X
 } from "lucide-react";
 import { searchService } from "../services/search.service";
 

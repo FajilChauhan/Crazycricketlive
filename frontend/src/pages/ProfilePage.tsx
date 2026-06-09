@@ -268,7 +268,6 @@ const ProfilePage = () => {
                     <p className="text-white/35 text-sm truncate">{t.organization_name}</p>
                   </div>
                 </div>
-                <StatusBadge status={t.status} />
               </div>
             ))}
           </div>

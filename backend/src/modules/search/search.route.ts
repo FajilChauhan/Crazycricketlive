@@ -5,10 +5,10 @@ import { searchController } from "./search.controller";
 
 const router = Router();
 
-router.get("/", authenticateToken, asyncHandler(searchController.searchAll));
-router.get("/users", authenticateToken, asyncHandler(searchController.searchUsers));
-router.get("/tournaments", authenticateToken, asyncHandler(searchController.searchTournaments));
-router.get("/teams", authenticateToken, asyncHandler(searchController.searchTeams));
-router.get("/matches", authenticateToken, asyncHandler(searchController.searchMatches));
+router.get("/", asyncHandler(searchController.searchAll));
+router.get("/users", asyncHandler(searchController.searchUsers));
+router.get("/tournaments", asyncHandler(searchController.searchTournaments));
+router.get("/teams", asyncHandler(searchController.searchTeams));
+router.get("/matches", asyncHandler(searchController.searchMatches));
 
 export default router;

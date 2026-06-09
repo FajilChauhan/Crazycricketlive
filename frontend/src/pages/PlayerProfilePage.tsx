@@ -161,12 +161,6 @@ const PlayerProfilePage = () => {
                   </span>
                 )}
               </div>
-              {profile?.email && (
-                <div className="flex items-center justify-center sm:justify-start gap-1.5">
-                  <Mail size={12} className="text-white/25" />
-                  <p className="text-white/40 text-sm">{profile.email}</p>
-                </div>
-              )}
               {profile?.role && (
                 <p className="text-white/30 text-sm mt-1 capitalize">{profile.role}</p>
               )}
@@ -220,10 +214,6 @@ const PlayerProfilePage = () => {
               <div className="flex justify-between items-center">
                 <span className="text-white/40 text-sm">Matches</span>
                 <span className="text-white font-semibold">{stats?.totalMatches ?? 0}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-white/40 text-sm">Strike Rate</span>
-                <span className="text-white/70 font-semibold">{strikeRate}</span>
               </div>
             </div>
           </div>

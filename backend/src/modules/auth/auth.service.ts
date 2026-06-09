@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { pool } from "../../config/dbconfig";
 import { ApiError } from "../../shared/utils/ApiError";
+import { sendResetCodeEmail } from "../../shared/utils/email.service";
 import { LoginBody, RegisterBody } from "./auth.types";
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -67,21 +68,12 @@ export const authService = {
       );
 
       const user = mapUser(result.rows[0]);
-
-      const token = signToken({
-        userId: user.userId,
-        email: user.email,
-      });
-
-      return {
-        user,
-        token,
-      };
+      const token = signToken({ userId: user.userId, email: user.email });
+      return { user, token };
     } catch (error: any) {
       if (error?.code === "23505") {
         throw new ApiError(409, "User already exists with this email or username");
       }
-
       throw error;
     }
   },
@@ -103,23 +95,13 @@ export const authService = {
     }
 
     const user = result.rows[0];
-
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       throw new ApiError(401, "Invalid email or password");
     }
 
-    const token = signToken({
-      userId: user.user_id,
-      email: user.email,
-    });
-
-    const safeUser = mapUser(user);
-
-    return {
-      user: safeUser,
-      token,
-    };
+    const token = signToken({ userId: user.user_id, email: user.email });
+    return { user: mapUser(user), token };
   },
 
   getMe: async (userId: string) => {
@@ -140,6 +122,7 @@ export const authService = {
 
   forgotPassword: async (email: string) => {
     const emailLower = email.trim().toLowerCase();
+
     const result = await pool.query(
       `SELECT user_id
        FROM users
@@ -147,9 +130,11 @@ export const authService = {
        LIMIT 1`,
       [emailLower]
     );
+
     if (result.rows.length === 0) {
       throw new ApiError(404, "User not found with this email");
     }
+
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
@@ -160,18 +145,15 @@ export const authService = {
       [code, expiresAt, emailLower]
     );
 
-    console.log(`\n======================================================`);
-    console.log(`🔑 PASSWORD RESET CODE FOR ${emailLower}: [ ${code} ]`);
-    console.log(`======================================================\n`);
+    // ✅ Send real email
+    await sendResetCodeEmail(emailLower, code);
 
-    return {
-      message: "Reset code generated",
-      code, // return for easy testing in development/sandbox
-    };
+    return { message: "Reset code sent to your email" };
   },
 
   verifyResetCode: async (email: string, code: string) => {
     const emailLower = email.trim().toLowerCase();
+
     const result = await pool.query(
       `SELECT reset_code, reset_code_expires_at
        FROM users
@@ -179,21 +161,27 @@ export const authService = {
        LIMIT 1`,
       [emailLower]
     );
+
     if (result.rows.length === 0) {
       throw new ApiError(404, "User not found");
     }
+
     const user = result.rows[0];
+
     if (!user.reset_code || user.reset_code !== code) {
       throw new ApiError(400, "Invalid reset code");
     }
+
     if (new Date() > new Date(user.reset_code_expires_at)) {
       throw new ApiError(400, "Reset code has expired");
     }
+
     return { valid: true };
   },
 
   resetPassword: async (email: string, code: string, newPassword: string) => {
     const emailLower = email.trim().toLowerCase();
+
     const result = await pool.query(
       `SELECT user_id, reset_code, reset_code_expires_at
        FROM users
@@ -201,24 +189,30 @@ export const authService = {
        LIMIT 1`,
       [emailLower]
     );
+
     if (result.rows.length === 0) {
       throw new ApiError(404, "User not found");
     }
+
     const user = result.rows[0];
+
     if (!user.reset_code || user.reset_code !== code) {
       throw new ApiError(400, "Invalid reset code");
     }
+
     if (new Date() > new Date(user.reset_code_expires_at)) {
       throw new ApiError(400, "Reset code has expired");
     }
 
     const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
     await pool.query(
       `UPDATE users
        SET password_hash = $1, reset_code = NULL, reset_code_expires_at = NULL
        WHERE user_id = $2`,
       [passwordHash, user.user_id]
     );
+
     return { success: true };
   },
 };

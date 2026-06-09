@@ -32,13 +32,11 @@ router.post(
 
 router.get(
   "/:teamId/members",
-  authenticateToken,
   asyncHandler(teamMemberController.getTeamMembers)
 );
 
 router.get(
   "/:teamId/members/:userId",
-  authenticateToken,
   asyncHandler(teamMemberController.getTeamMemberByUserId)
 );
 

@@ -333,19 +333,35 @@ export const tournamentService = {
   },
 
   deleteTournament: async (tournamentId: string, userId: string) => {
-    await ensureTournamentOwner(tournamentId, userId);
+  await ensureTournamentOwner(tournamentId, userId);
 
-    const result = await pool.query(
-      `DELETE FROM tournaments
-       WHERE tournament_id = $1
-       RETURNING tournament_id`,
-      [tournamentId]
+  // ✅ Check if tournament has teams
+  const teamCheck = await pool.query(
+    `SELECT team_id
+     FROM teams
+     WHERE tournament_id = $1
+     LIMIT 1`,
+    [tournamentId]
+  );
+
+  if (teamCheck.rows.length > 0) {
+    throw new ApiError(
+      400,
+      "Cannot delete tournament — it contains teams. Delete all teams first."
     );
+  }
 
-    if (result.rows.length === 0) {
-      throw new ApiError(404, "Tournament not found");
-    }
+  const result = await pool.query(
+    `DELETE FROM tournaments
+     WHERE tournament_id = $1
+     RETURNING tournament_id`,
+    [tournamentId]
+  );
 
-    return { message: "Tournament deleted successfully" };
-  },
+  if (result.rows.length === 0) {
+    throw new ApiError(404, "Tournament not found");
+  }
+
+  return { message: "Tournament deleted successfully" };
+},
 };

@@ -37,7 +37,7 @@ const CreateTournamentPage = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["tournaments"] });
       toast.success("Tournament created!");
-      navigate(`/tournaments/${data.tournament_id}`);
+      navigate(`/tournaments/${data.tournament_id}`, { replace: true });
     },
 
     onError: (err: any) => {

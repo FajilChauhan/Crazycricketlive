@@ -42,25 +42,27 @@ const ForgotPasswordPage = () => {
 
   // Step 1: Send verification code
   const handleSendCode = async (data: EmailForm) => {
-    try {
-      setLoading(true);
-      const res = await authService.forgotPassword(data.email);
-      setEmail(data.email);
-      
-      // Developer helper to ease manual testing
-      if (res && res.code) {
-        console.log(`[DEV HELPER] Verification code is: ${res.code}`);
-        toast.success(`[DEV] Verification code: ${res.code}`, { duration: 8000 });
-      } else {
-        toast.success("Verification code sent to your email!");
-      }
-      setStep(2);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to send verification code");
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    setLoading(true);
+
+    await authService.forgotPassword(data.email);
+
+    setEmail(data.email);
+
+    toast.success(
+      "Verification code sent successfully. Please check your Inbox and Spam/Junk folder."
+    );
+
+    setStep(2);
+  } catch (err: any) {
+    toast.error(
+      err?.response?.data?.message ||
+      "Failed to send verification code"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Step 2: Verify code
   const handleVerifyCode = async (data: CodeForm) => {

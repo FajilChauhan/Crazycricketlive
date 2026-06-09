@@ -23,13 +23,13 @@ const validateBody =
     next();
   };
 
-router.get("/", authenticateToken, asyncHandler(userController.getAllUsers));
-router.get("/available/tournament/:tournamentId", authenticateToken, asyncHandler(userController.getAvailableUsersForTournament));
-router.get("/:userId", authenticateToken, asyncHandler(userController.getUserById));
+router.get("/", asyncHandler(userController.getAllUsers));
+router.get("/available/tournament/:tournamentId", asyncHandler(userController.getAvailableUsersForTournament));
+router.get("/:userId", asyncHandler(userController.getUserById));
 router.put("/:userId", authenticateToken, validateBody(updateUserSchema), asyncHandler(userController.updateUser));
 router.delete("/:userId", authenticateToken, asyncHandler(userController.deleteUser));
 
-router.get("/team/:teamId", authenticateToken, asyncHandler(userController.getUsersByTeam));
-router.get("/tournament/:tournamentId", authenticateToken, asyncHandler(userController.getUsersByTournament));
+router.get("/team/:teamId", asyncHandler(userController.getUsersByTeam));
+router.get("/tournament/:tournamentId", asyncHandler(userController.getUsersByTournament));
 
 export default router;

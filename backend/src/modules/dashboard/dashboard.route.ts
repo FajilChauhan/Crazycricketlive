@@ -5,11 +5,11 @@ import { dashboardController } from "./dashboard.controller";
 
 const router = Router();
 
-router.get("/summary", authenticateToken, asyncHandler(dashboardController.getSummary));
-router.get("/live-matches", authenticateToken, asyncHandler(dashboardController.getLiveMatches));
-router.get("/upcoming-matches", authenticateToken, asyncHandler(dashboardController.getUpcomingMatches));
-router.get("/recent-tournaments", authenticateToken, asyncHandler(dashboardController.getRecentTournaments));
-router.get("/top-teams", authenticateToken, asyncHandler(dashboardController.getTopTeams));
-router.get("/top-players", authenticateToken, asyncHandler(dashboardController.getTopPlayers));
+router.get("/summary", asyncHandler(dashboardController.getSummary));
+router.get("/live-matches", asyncHandler(dashboardController.getLiveMatches));
+router.get("/upcoming-matches", asyncHandler(dashboardController.getUpcomingMatches));
+router.get("/recent-tournaments", asyncHandler(dashboardController.getRecentTournaments));
+router.get("/top-teams", asyncHandler(dashboardController.getTopTeams));
+router.get("/top-players", asyncHandler(dashboardController.getTopPlayers));
 
 export default router;

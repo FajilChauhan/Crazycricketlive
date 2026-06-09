@@ -52,7 +52,7 @@ const LoginPage = () => {
             Welcome back
           </h1>
           <p className="text-white/40 text-sm mt-1">
-            Sign in to GullyCricketLive
+            Sign in to CrazyCricketLive
           </p>
         </div>
 

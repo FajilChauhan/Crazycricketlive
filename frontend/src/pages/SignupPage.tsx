@@ -29,7 +29,11 @@ const SignupPage = () => {
   const onSubmit = async (data: SignupFormData) => {
     try {
       setLoading(true);
-      const { confirmPassword, ...payload } = data;
+      const payload = {
+        username: data.username,
+        email: data.email,
+        password: data.password,
+      };
       const res = await authService.signup(payload);
       dispatch(setCredentials({ user: res.user, token: res.token }));
       toast.success(`Welcome, ${res.user.username}! 🏏`);
@@ -54,7 +58,7 @@ const SignupPage = () => {
             Create your account
           </h1>
           <p className="text-white/40 text-sm mt-1">
-            Join GullyCricketLive today
+            Join CrazyCricketLive today
           </p>
         </div>
 

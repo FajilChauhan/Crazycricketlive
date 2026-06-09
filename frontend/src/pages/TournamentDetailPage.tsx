@@ -13,7 +13,7 @@ import { z } from "zod";
 import { tournamentService } from "../services/tournament.service";
 import { teamService } from "../services/team.service";
 import { useAppSelector } from "../hooks/useAppSelector";
-import type { TournamentDetail, Team, Match, PointsRow } from "../features/tournament/tournament.types";
+import type { TournamentDetail, Team, Match } from "../features/tournament/tournament.types";
 
 type Tab = "overview" | "matches" | "teams" | "points";
 
@@ -286,12 +286,6 @@ console.log("Tournament Owner ID:", tournament?.created_by_user_id);
                 <p className="text-white/40 text-sm mt-0.5">
                   {tournament.organization_name}
                 </p>
-                <div className="flex items-center gap-3 mt-2 flex-wrap">
-                  {/* ✅ removed date display */}
-                  <span className="text-white/20 text-xs">
-                    by {tournament.created_by_username}
-                  </span>
-                </div>
               </div>
             </div>
 

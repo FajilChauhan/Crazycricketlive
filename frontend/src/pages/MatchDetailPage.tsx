@@ -14,9 +14,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { matchService } from "../services/match.service";
 import { teamMemberService } from "../services/teamMember.service";
-import { matchPermissionService } from "../services/matchPermission.service";
 import { userService } from "../services/user.service";
 import { useAppSelector } from "../hooks/useAppSelector";
+import { useMatchSocket } from "../hooks/useMatchSocket";
 
 type Tab = "summary" | "scorecard" | "history" | "permissions";
 
@@ -327,85 +327,6 @@ const UpdateStatusModal = ({ matchId, currentStatus, onClose, onSuccess }: any) 
   );
 };
 
-// ── Grant Permission Modal ────────────────────────────────────────
-const GrantPermissionModal = ({ matchId, onClose, onSuccess }: any) => {
-  const schema = z.object({
-    userId: z.string().min(1, "Select a user"),
-    permissionType: z.enum(["score_update", "match_admin"]),
-  });
-  type F = z.infer<typeof schema>;
-
-  const { data: allUsers = [] } = useQuery({
-    queryKey: ["all-users"],
-    queryFn: userService.getAllUsers,
-  });
-
-  const { register, handleSubmit, formState: { errors } } = useForm<F>({
-    resolver: zodResolver(schema),
-    defaultValues: { permissionType: "score_update" },
-  });
-
-  const mutation = useMutation({
-    mutationFn: (d: F) => matchPermissionService.grant(matchId, d),
-    onSuccess: () => { toast.success("Permission granted!"); onSuccess(); onClose(); },
-    onError: (e: any) => toast.error(e?.response?.data?.message || "Failed"),
-  });
-
-  return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
-      <div className="bg-[#1a1a1a] border border-white/[0.1] rounded-2xl p-6 w-full max-w-md">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-white font-semibold text-lg">Grant Permission</h2>
-          <button onClick={onClose} className="text-white/30 hover:text-white/60"><X size={18} /></button>
-        </div>
-        <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-white/60 mb-2">Select User</label>
-            <div className="relative">
-              <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
-              <select {...register("userId")}
-                className="w-full appearance-none bg-[#111] border border-white/[0.08] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-green-500/50">
-                <option value="">Choose user...</option>
-                {allUsers.map((u: any) => (
-                  <option key={u.userId} value={u.userId}>
-                    {u.username} ({u.email})
-                  </option>
-                ))}
-              </select>
-            </div>
-            {errors.userId && <p className="text-red-400 text-xs mt-1">{errors.userId.message}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-white/60 mb-2">Permission Type</label>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { v: "score_update", label: "Score Update", sub: "Can add balls only" },
-                { v: "match_admin",  label: "Match Admin",  sub: "Full match control" },
-              ].map((p) => (
-                <label key={p.v}
-                  className="flex flex-col gap-1 p-3 rounded-xl bg-[#111] border border-white/[0.08] cursor-pointer hover:border-green-500/30 transition-all">
-                  <div className="flex items-center gap-2">
-                    <input {...register("permissionType")} type="radio" value={p.v} className="accent-green-500" />
-                    <span className="text-white text-sm font-medium">{p.label}</span>
-                  </div>
-                  <span className="text-white/30 text-xs ml-5">{p.sub}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-white/10 text-white/40 text-sm">Cancel</button>
-            <button type="submit" disabled={mutation.isPending}
-              className="flex-1 py-2.5 rounded-xl bg-green-500 hover:bg-green-600 text-white font-semibold text-sm disabled:opacity-50">
-              {mutation.isPending ? "Granting..." : "Grant"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
 
 // ── Player Row ────────────────────────────────────────────────────
 const PlayerRow = ({ player, onClick }: { player: any; onClick: () => void }) => (
@@ -578,7 +499,9 @@ const MatchDetailPage = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showTossModal, setShowTossModal] = useState(false);
   const [showInningsModal, setShowInningsModal] = useState(false);
-  const [showGrantModal, setShowGrantModal] = useState(false);
+
+  // Real-time updates via WebSockets
+  useMatchSocket(matchId);
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["match", matchId] });
@@ -589,8 +512,6 @@ const MatchDetailPage = () => {
     queryKey: ["match", matchId],
     queryFn: () => matchService.getById(matchId!),
     enabled: !!matchId,
-    refetchInterval: (q) =>
-      q.state.data?.match?.status === "live" ? 8000 : false,
   });
 
   const { data: ballsData } = useQuery({
@@ -599,42 +520,17 @@ const MatchDetailPage = () => {
     enabled: !!matchId && tab === "history",
   });
 
-  const { data: permissionsData, refetch: refetchPerms } = useQuery({
-    queryKey: ["permissions", matchId],
-    queryFn: () => matchPermissionService.list(matchId!),
-    enabled: !!matchId && tab === "permissions" && isAuthenticated,
-  });
-
-  const { data: myPermission } = useQuery({
-    queryKey: ["my-permission", matchId],
-    queryFn: () => matchPermissionService.checkMyPermission(matchId!),
-    enabled: !!matchId && isAuthenticated,
-  });
-
-  const revokePermMutation = useMutation({
-    mutationFn: (permId: string) =>
-      matchPermissionService.revoke(matchId!, permId),
-    onSuccess: () => {
-      toast.success("Permission revoked");
-      refetchPerms();
-    },
-    onError: (e: any) => toast.error(e?.response?.data?.message || "Failed"),
-  });
-
   // ── Early returns AFTER all hooks ────────────────────────────
   if (isLoading) return <PageLoader />;
   if (error || !data) return <ErrorState />;
 
-  const { match, innings = [], players = [] } = data;
+  const { match, innings = [] } = data;
 
   const isOwner =
     isAuthenticated &&
     !!user &&
     String(user.userId) === String(match.tournament_created_by_user_id ?? "");
 
-  const canScore =
-    isOwner ||
-    (isAuthenticated && myPermission?.canUpdateScore === true);
 
   const team1Players = (data?.players ?? []).filter(
     (p: any) => String(p.team_id) === String(data?.match?.team1_id)
@@ -647,7 +543,7 @@ const MatchDetailPage = () => {
   const currentInnings = innings.find((i: any) => !i.is_completed);
   const nextInningsNo = innings.length + 1;
   const canStartInnings =
-    canScore &&
+    isOwner &&
     match.status === "live" &&
     !currentInnings &&
     innings.length < 2;
@@ -736,7 +632,7 @@ const MatchDetailPage = () => {
                   <Play size={14} /> Start Innings {nextInningsNo}
                 </button>
               )}
-              {canScore && match.status === "live" && currentInnings && (
+              {isOwner && match.status === "live" && currentInnings && (
                 <button
                   onClick={() => navigate(`/matches/${matchId}/scoring`)}
                   className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors">
@@ -972,71 +868,6 @@ const MatchDetailPage = () => {
             )}
           </div>
         )}
-
-        {/* ── Permissions Tab ── */}
-        {tab === "permissions" && isOwner && (
-          <div className="space-y-4">
-            <div className="bg-[#1a1a1a] border border-white/[0.07] rounded-2xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white font-semibold">Match Permissions</h3>
-                <button onClick={() => setShowGrantModal(true)}
-                  className="flex items-center gap-2 px-3.5 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-medium transition-colors">
-                  <UserPlus size={14} /> Grant Access
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mb-5">
-                {[
-                  { label: "score_update", desc: "Add balls, update runs/wickets" },
-                  { label: "match_admin",  desc: "Full access including status" },
-                ].map((p) => (
-                  <div key={p.label}
-                    className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                    <p className="text-white/60 text-xs font-semibold font-mono">{p.label}</p>
-                    <p className="text-white/30 text-xs mt-1">{p.desc}</p>
-                  </div>
-                ))}
-              </div>
-
-              {!permissionsData || permissionsData.length === 0 ? (
-                <div className="py-8 text-center text-white/20 text-sm">
-                  No permissions granted yet
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {permissionsData.map((p: any) => (
-                    <div key={p.permission_id}
-                      className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[#1f1f1f] border border-white/[0.06]">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-white/[0.05] flex items-center justify-center text-[10px] text-white/40 font-bold">
-                          {p.username?.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-white text-sm font-medium">{p.username}</p>
-                          <p className="text-white/30 text-xs">{p.email}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-[10px] font-semibold uppercase tracking-wide border rounded px-2 py-0.5
-                          ${p.permission_type === "match_admin"
-                            ? "bg-purple-500/15 text-purple-400 border-purple-500/25"
-                            : "bg-blue-500/15 text-blue-400 border-blue-500/20"}`}>
-                          {p.permission_type}
-                        </span>
-                        <button
-                          onClick={() => revokePermMutation.mutate(p.permission_id)}
-                          className="p-1.5 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-500/10 transition-colors">
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
       </div>
 
       {/* ── Modals ── */}
@@ -1067,16 +898,6 @@ const MatchDetailPage = () => {
           firstBattingTeamId={match.first_batting_team_id}
           onClose={() => setShowInningsModal(false)}
           onSuccess={invalidate}
-        />
-      )}
-      {showGrantModal && (
-        <GrantPermissionModal
-          matchId={matchId!}
-          onClose={() => setShowGrantModal(false)}
-          onSuccess={() => {
-            refetchPerms();
-            setShowGrantModal(false);
-          }}
         />
       )}
     </div>

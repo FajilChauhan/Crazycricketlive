@@ -13,13 +13,11 @@ router.post(
 
 router.get(
   "/:tournamentId/points",
-  authenticateToken,
   asyncHandler(pointController.getPointsTable)
 );
 
 router.get(
   "/:tournamentId/points/:teamId",
-  authenticateToken,
   asyncHandler(pointController.getTeamStanding)
 );
 
