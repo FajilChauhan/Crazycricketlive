@@ -51,7 +51,7 @@ const addSchema = z.object({
 });
 type AddForm = z.infer<typeof addSchema>;
 
-const ROLES = ["player", "batsman", "bowler", "all_rounder", "keeper"];
+const ROLES = ["batsman", "bowler", "all_rounder", "keeper"];
 
 const AddPlayerModal = ({
   teamId,
@@ -73,7 +73,7 @@ const AddPlayerModal = ({
 
   const { register, handleSubmit, formState: { errors } } = useForm<AddForm>({
     resolver: zodResolver(addSchema),
-    defaultValues: { isCaptain: false, role: "Player" },
+    defaultValues: { isCaptain: false, role: "batsman" },
   });
 
   const mutation = useMutation({
