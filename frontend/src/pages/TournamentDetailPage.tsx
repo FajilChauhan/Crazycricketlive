@@ -275,20 +275,21 @@ console.log("Tournament Owner ID:", tournament?.created_by_user_id);
         <div className="bg-[#1a1a1a] border border-white/[0.07] rounded-2xl p-6">
           <div className="flex items-start justify-between gap-4 flex-wrap">
 
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center flex-shrink-0">
-                <Trophy size={24} className="text-green-500" />
-              </div>
-              <div className="min-w-0 flex-1">
-                  <h1 className="text-white text-xl font-semibold line-clamp-2 break-words">
-                    {tournament.tournament_name}
-                  </h1>
+          <div className="flex items-start gap-4 w-full min-w-0">
+            <div className="w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center flex-shrink-0">
+              <Trophy size={24} className="text-green-500" />
+            </div>
 
-                  <p className="text-white/40 text-sm mt-0.5 truncate">
-                    {tournament.organization_name}
-                  </p>
-                </div>
-              </div>
+            <div className="flex-1 min-w-0 overflow-hidden">
+              <h1 className="text-white text-xl font-semibold break-words whitespace-normal">
+                {tournament.tournament_name}
+              </h1>
+
+              <p className="text-white/40 text-sm mt-1 break-words">
+                {tournament.organization_name}
+              </p>
+            </div>
+          </div>
 
             {/* Owner only — Edit + Delete */}
             {isOwner && (
