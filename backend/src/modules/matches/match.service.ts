@@ -1,7 +1,7 @@
 import { pool } from "../../config/dbconfig";
 import { ApiError } from "../../shared/utils/ApiError";
 import { withTransaction } from "../../shared/utils/withTransaction";
-import { emitToMatch } from "../../socket";
+import { emitToMatch } from "../../socket/index";
 import {
   AddBallBody,
   AddPlayingXIBody,
