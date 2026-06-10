@@ -279,15 +279,16 @@ console.log("Tournament Owner ID:", tournament?.created_by_user_id);
               <div className="w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center flex-shrink-0">
                 <Trophy size={24} className="text-green-500" />
               </div>
-              <div>
-                <h1 className="text-white text-xl font-semibold">
-                  {tournament.tournament_name}
-                </h1>
-                <p className="text-white/40 text-sm mt-0.5">
-                  {tournament.organization_name}
-                </p>
+              <div className="min-w-0 flex-1">
+                  <h1 className="text-white text-xl font-semibold line-clamp-2 break-words">
+                    {tournament.tournament_name}
+                  </h1>
+
+                  <p className="text-white/40 text-sm mt-0.5 truncate">
+                    {tournament.organization_name}
+                  </p>
+                </div>
               </div>
-            </div>
 
             {/* Owner only — Edit + Delete */}
             {isOwner && (
