@@ -18,7 +18,7 @@ import { userService } from "../services/user.service";
 import { useAppSelector } from "../hooks/useAppSelector";
 import { useMatchSocket } from "../hooks/useMatchSocket";
 
-type Tab = "summary" | "scorecard" | "history" | "permissions";
+type Tab = "summary" | "scorecard" | "history";
 
 // ── helpers ───────────────────────────────────────────────────────
 const fmt = (d?: string) => {
@@ -552,9 +552,6 @@ const MatchDetailPage = () => {
     { key: "summary",     label: "Summary",     icon: <BarChart3 size={14} /> },
     { key: "scorecard",   label: "Scorecard",   icon: <TrendingUp size={14} /> },
     { key: "history",     label: "History",     icon: <History size={14} /> },
-    ...(isOwner
-      ? [{ key: "permissions", label: "Permissions", icon: <Shield size={14} /> }]
-      : []),
   ];
 
   // Win margin helper
