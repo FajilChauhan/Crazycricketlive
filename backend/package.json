@@ -1,10 +1,10 @@
 {
-  "name": "gullycricket-backend",
+  "name": "crazycricket-backend",
   "version": "0.1.0",
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --skipLibCheck",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only --project tsconfig.json src/server.ts"
   },
