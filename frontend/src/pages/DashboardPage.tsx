@@ -187,7 +187,6 @@ const TournamentCard = ({ tournament, onClick }: { tournament: any; onClick: () 
       </p>
       <p className="text-white/30 text-[10px] truncate mt-0.5">{tournament.organization_name}</p>
     </div>
-    <StatusBadge status={tournament.status} />
   </div>
 );
 
