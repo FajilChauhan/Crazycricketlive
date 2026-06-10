@@ -1,7 +1,6 @@
 import { pool } from "../../config/dbconfig";
 import { ApiError } from "../../shared/utils/ApiError";
 import { withTransaction } from "../../shared/utils/withTransaction";
-import { getCache, setCache, deleteCache } from "../../config/redis";
 import { emitToMatch } from "../../socket";
 import {
   AddBallBody,
@@ -13,6 +12,38 @@ import {
   TossBody,
   UpdateMatchBody,
 } from "./match.types";
+
+// Lazy-load redis helpers so the service starts even if dist/config/redis.js
+// is absent (e.g. a build where redis.ts failed to compile).
+type CacheFn = {
+  getCache: (key: string) => Promise<string | null>;
+  setCache: (key: string, value: string, ttlSeconds?: number) => Promise<void>;
+  deleteCache: (key: string) => Promise<void>;
+};
+
+const _noopCache: CacheFn = {
+  getCache: async () => null,
+  setCache: async () => {},
+  deleteCache: async () => {},
+};
+
+let _cache: CacheFn | null = null;
+
+function getRedisCache(): CacheFn {
+  if (_cache) return _cache;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    _cache = require("../../config/redis") as CacheFn;
+    return _cache;
+  } catch {
+    return _noopCache;
+  }
+}
+
+const getCache = (key: string) => getRedisCache().getCache(key);
+const setCache = (key: string, value: string, ttlSeconds?: number) =>
+  getRedisCache().setCache(key, value, ttlSeconds);
+const deleteCache = (key: string) => getRedisCache().deleteCache(key);
 
 
 type Db = {
