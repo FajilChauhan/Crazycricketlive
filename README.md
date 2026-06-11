@@ -1,6 +1,6 @@
 # 🏏 CrazyCricketLive
 
-A modern cricket tournament and live scoring platform built for local, Crazy, box cricket, community leagues, and professional tournaments.
+A modern cricket tournament and live scoring platform built for local, Gully, box cricket, community leagues, and professional tournaments.
 
 CrazyCricketLive allows organizers to create tournaments, manage teams, add players, schedule matches, perform live scoring, maintain points tables, and track player statistics in real time.
 
@@ -347,4 +347,4 @@ Authorization: Bearer <token>
 
 Built with ❤️ for local cricket communities.
 
-CrazyCricketLive aims to digitize Crazy cricket, box cricket, community tournaments, and professional leagues with a modern real-time scoring experience.
+CrazyCricketLive aims to digitize Guuly cricket, box cricket, community tournaments, and professional leagues with a modern real-time scoring experience.
