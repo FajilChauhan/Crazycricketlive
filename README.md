@@ -5,7 +5,13 @@ A modern cricket tournament and live scoring platform built for local, Gully, bo
 CrazyCricketLive allows organizers to create tournaments, manage teams, add players, schedule matches, perform live scoring, maintain points tables, and track player statistics in real time.
 
 ---
+🚀 Live Demo
 
+👉 https://crazycricketlive.vercel.app/
+
+📦 Repository
+
+👉 https://github.com/FajilChauhan/CrazyCricketLive
 # ✨ Features
 
 ## Authentication & User Management
