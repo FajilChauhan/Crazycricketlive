@@ -1023,35 +1023,15 @@ export const matchService = {
               t2.team_name AS team2_name,
               t2.team_id   AS team2_id,
               wn.team_name AS winner_team_name,
-              -- determine which team player belongs to in this match
-              COALESCE(mp.team_id, tm.team_id) AS player_team_id,
-              COALESCE(
-                CASE WHEN mp.team_id = m.team1_id THEN t1.team_name
-                     WHEN mp.team_id = m.team2_id THEN t2.team_name END,
-                CASE WHEN tm.team_id = m.team1_id THEN t1.team_name
-                     WHEN tm.team_id = m.team2_id THEN t2.team_name END
-              ) AS player_team_name
+              mp.team_id   AS player_team_id,
+              CASE WHEN mp.team_id = m.team1_id THEN t1.team_name
+                   WHEN mp.team_id = m.team2_id THEN t2.team_name END AS player_team_name
        FROM matches m
        JOIN tournaments tr ON m.tournament_id = tr.tournament_id
        JOIN teams t1 ON m.team1_id = t1.team_id
        JOIN teams t2 ON m.team2_id = t2.team_id
        LEFT JOIN teams wn ON m.winner_team_id = wn.team_id
-       -- via playing XI
-       LEFT JOIN match_players mp ON m.match_id = mp.match_id AND mp.user_id = $1
-       -- via team membership (catches matches where playing XI wasn't set)
-       LEFT JOIN team_members tm ON (tm.team_id = m.team1_id OR tm.team_id = m.team2_id)
-                                  AND tm.user_id = $1
-       WHERE (
-         mp.user_id = $1
-         OR tm.user_id = $1
-         -- also find via actual balls bowled/batted
-         OR EXISTS (
-           SELECT 1 FROM ball_by_ball bbb
-           JOIN innings i ON bbb.innings_id = i.innings_id
-           WHERE i.match_id = m.match_id
-             AND (bbb.striker_id = $1 OR bbb.bowler_id = $1 OR bbb.non_striker_id = $1)
-         )
-       )
+       JOIN match_players mp ON m.match_id = mp.match_id AND mp.user_id = $1
        ORDER BY m.created_at DESC`,
       [userId]
     );
