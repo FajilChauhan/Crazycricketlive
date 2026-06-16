@@ -534,6 +534,8 @@ useEffect(() => {
   const team2Members = matchPlayers.filter((p) => String(p.team_id) === String(match?.team2_id));
   const innings = (data?.innings ?? []) as any[];
   const currentInnings = innings.find((i: any) => !i.is_completed);
+  const innings1 = innings.find((i: any) => i.innings_no === 1);
+  const targetRuns = currentInnings?.target_runs ?? (currentInnings?.innings_no >= 2 && innings1 ? innings1.runs + 1 : null);
   const is1v1 = match?.match_mode === "1v1";
 
   const battingPlayers: TeamMember[] =
@@ -609,8 +611,10 @@ useEffect(() => {
 
   // ── Target chased ─────────────────────────────────────────────
   const checkTargetChased = useCallback(async (freshCurrent: any) => {
-    if (!freshCurrent?.target_runs) return false;
-    if (freshCurrent.runs >= freshCurrent.target_runs) {
+    const inn1 = (freshMatchData?.innings ?? innings ?? []).find((i: any) => i.innings_no === 1);
+    const target = freshCurrent?.target_runs ?? (freshCurrent?.innings_no >= 2 && inn1 ? inn1.runs + 1 : null);
+    if (!target) return false;
+    if (freshCurrent.runs >= target) {
       try {
         await matchService.endInnings(matchId!, freshCurrent.innings_id);
         await clearState();
@@ -619,7 +623,7 @@ useEffect(() => {
       return true;
     }
     return false;
-  }, [matchId, autoDeclareWinner, clearState]);
+  }, [matchId, autoDeclareWinner, clearState, freshMatchData, innings]);
 
   // ── All-out in innings 2 ──────────────────────────────────────
   const checkAllOutInnings2 = useCallback(async (freshCurrent: any, allInnings: any[]) => {
@@ -1039,7 +1043,7 @@ useEffect(() => {
     );
   }
 
-  if (showMatchEnd && (freshMatchData || match)) {
+  if ((showMatchEnd || match?.status === "completed") && (freshMatchData || match)) {
     return (
       <MatchEndModal
         matchId={matchId!}

@@ -64,7 +64,7 @@ const Navbar = () => {
               <p className="text-white/35 text-[10px] mt-0.5">Live matches · Tournaments</p>
             </div>
             <span className="text-white font-semibold text-[15px] tracking-tight sm:hidden">
-              GullyCricket
+              CrazyCricketLive
             </span>
           </Link>
 
