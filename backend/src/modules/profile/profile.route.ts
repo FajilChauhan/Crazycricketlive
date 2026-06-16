@@ -47,53 +47,9 @@ router.get(
 );
 
 router.get(
-  "/me/teams",
-  authenticateToken,
-  asyncHandler(profileController.getMyTeams)
-);
-
-router.get(
   "/me/matches",
   authenticateToken,
   asyncHandler(profileController.getMyMatches)
-);
-
-router.get(
-  "/me/live-matches",
-  authenticateToken,
-  asyncHandler(profileController.getMyLiveMatches)
-);
-
-/* PUBLIC PROFILE ROUTES BELOW */
-
-router.get(
-  "/:userId",
-  asyncHandler(profileController.getProfileById)
-);
-
-router.get(
-  "/:userId/tournaments",
-  asyncHandler(profileController.getUserTournaments)
-);
-
-router.get(
-  "/:userId/teams",
-  asyncHandler(profileController.getUserTeams)
-);
-
-router.get(
-  "/:userId/matches",
-  asyncHandler(profileController.getUserMatches)
-);
-
-router.get(
-  "/:userId/live-matches",
-  asyncHandler(profileController.getUserLiveMatches)
-);
-
-router.get(
-  "/:userId/stats",
-  asyncHandler(profileController.getUserStats)
 );
 
 export default router;

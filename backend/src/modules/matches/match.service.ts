@@ -639,10 +639,8 @@ export const matchService = {
   },
 
   addBall: async (matchId: string, userId: string, body: AddBallBody) => {
-    await ensureScoreUpdateAccess(matchId, userId);
-
     const result = await withTransaction(async (client) => {
-      const match = await getMatchOrThrow(matchId, client);
+      const match = await ensureScoreUpdateAccess(matchId, userId, client);
 
       if (match.status !== "live") {
         throw new ApiError(400, "Match must be live to add a ball");
@@ -678,14 +676,6 @@ export const matchService = {
         throw new ApiError(400, "Duplicate player references are not allowed in one delivery");
       }
 
-      const maxDeliveryResult = await client.query(
-        `SELECT COALESCE(MAX(delivery_number), 0)::int AS max_delivery
-         FROM ball_by_ball
-         WHERE innings_id = $1`,
-         [body.inningsId]
-      );
-
-      const nextDeliveryNumber = (maxDeliveryResult.rows[0].max_delivery || 0) + 1;
       const isLegalDelivery =
         body.isLegalDelivery ??
         !(body.extraType === "wide" || body.extraType === "no_ball");
@@ -700,12 +690,11 @@ export const matchService = {
           striker_id, non_striker_id, bowler_id,
           runs_scored, extra_runs, extra_type,
           is_legal_delivery, is_wicket, wicket_type, commentary)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+         VALUES ($1, $2, (SELECT COALESCE(MAX(delivery_number), 0) + 1 FROM ball_by_ball WHERE innings_id = $2), $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
          RETURNING *`,
         [
           matchId,
           body.inningsId,
-          nextDeliveryNumber,
           body.overNumber,
           body.ballInOver,
           body.strikerId || null,

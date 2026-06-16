@@ -26,10 +26,5 @@ const validateBody =
 router.get("/", asyncHandler(userController.getAllUsers));
 router.get("/available/tournament/:tournamentId", asyncHandler(userController.getAvailableUsersForTournament));
 router.get("/:userId", asyncHandler(userController.getUserById));
-router.put("/:userId", authenticateToken, validateBody(updateUserSchema), asyncHandler(userController.updateUser));
-router.delete("/:userId", authenticateToken, asyncHandler(userController.deleteUser));
-
-router.get("/team/:teamId", asyncHandler(userController.getUsersByTeam));
-router.get("/tournament/:tournamentId", asyncHandler(userController.getUsersByTournament));
 
 export default router;
