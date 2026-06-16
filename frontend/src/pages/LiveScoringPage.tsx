@@ -867,7 +867,26 @@ useEffect(() => {
     setStrikerId(newId);
     setOutBatsmanId("");
 
-    if (wicketWasLastBall) {
+    const maxBalls = (match?.overs ?? 0) * 6;
+    const isOversDone = (currentInnings?.balls_bowled ?? 0) >= maxBalls;
+
+    if (isOversDone) {
+      setWicketWasLastBall(false);
+      const allInnings = (freshMatchData?.innings ?? innings ?? []) as any[];
+      if (currentInnings?.innings_no >= 2) {
+        await checkOversDoneInnings2(currentInnings, allInnings);
+      } else {
+        try {
+          await matchService.endInnings(matchId!, currentInnings.innings_id);
+          await clearState();
+          queryClient.invalidateQueries({ queryKey: ["match", matchId] });
+          toast.success(`Innings complete! ${match?.overs} overs done.`);
+          navigate(`/matches/${matchId}`, { replace: true });
+        } catch (e: any) {
+          toast.error(e?.response?.data?.message || "Failed to end innings");
+        }
+      }
+    } else if (wicketWasLastBall) {
       setWicketWasLastBall(false);
       setPhase("over-end");
       await persistState({
