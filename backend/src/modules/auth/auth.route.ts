@@ -3,7 +3,7 @@ import { authController } from "./auth.controller";
 import { authenticateToken } from "../../shared/middlewares/auth.middleware";
 import { asyncHandler } from "../../shared/utils/asyncHandler";
 import { loginSchema, registerSchema, forgotPasswordSchema, verifyResetCodeSchema, resetPasswordSchema } from "./auth.schema";
-import { upload } from "../../middlewares/upload.middleware";
+import { upload } from "../../shared/middlewares/upload.middleware";
 
 const router = Router();
 

@@ -3,7 +3,7 @@ import { authenticateToken } from "../../shared/middlewares/auth.middleware";
 import { asyncHandler } from "../../shared/utils/asyncHandler";
 import { profileController } from "./profile.controller";
 import { updateProfileSchema } from "./profile.schema";
-import { upload } from "../../middlewares/upload.middleware";
+import { upload } from "../../shared/middlewares/upload.middleware";
 
 const router = Router();
 

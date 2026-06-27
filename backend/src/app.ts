@@ -19,7 +19,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static images from external directory
-app.use("/api/uploads", express.static("C:\\Users\\fajil\\OneDrive\\Dokumen\\CrazyCricketLiveImages"));
+import path from "path";
+const UPLOAD_DIR = process.env.NODE_ENV === 'production'
+  ? path.join(process.cwd(), 'uploads')
+  : "C:\\Users\\fajil\\OneDrive\\Dokumen\\CrazyCricketLiveImages";
+app.use("/api/uploads", express.static(UPLOAD_DIR));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/tournaments", tournamentRoutes);
