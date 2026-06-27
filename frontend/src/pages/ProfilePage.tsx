@@ -15,6 +15,7 @@ import { useAppSelector } from "../hooks/useAppSelector";
 import { useAppDispatch } from "../hooks/useAppDispatch";
 import { setUser } from "../features/auth/authSlice";
 import type { UserStats, UserTournament, UserMatch } from "../features/profile/profile.types";
+import { getImageUrl } from "../utils/image";
 
 type Tab = "overview" | "tournaments" | "matches";
 
@@ -160,7 +161,7 @@ const ProfilePage = () => {
                 style={{ cursor: editing ? 'pointer' : 'default' }}
               >
                 {previewUrl || profile?.profileImage ? (
-                  <img src={previewUrl || profile?.profileImage} alt="" className="w-full h-full object-cover" />
+                  <img src={getImageUrl(previewUrl || profile?.profileImage)} alt="" className="w-full h-full object-cover" />
                 ) : (
                   initials
                 )}

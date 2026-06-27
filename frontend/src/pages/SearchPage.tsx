@@ -7,6 +7,7 @@ import {
   User, X
 } from "lucide-react";
 import { searchService } from "../services/search.service";
+import { getImageUrl } from "../utils/image";
 
 type Filter = "all" | "tournaments" | "teams" | "matches" | "users";
 
@@ -271,7 +272,7 @@ const DashboardPage = () => {
                     >
                       <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/15 flex items-center justify-center text-[11px] font-bold text-purple-400 flex-shrink-0">
                         {u.profileImage ?? u.profile_image
-                          ? <img src={u.profileImage ?? u.profile_image} alt="" className="w-full h-full object-cover rounded-xl" />
+                          ? <img src={getImageUrl(u.profileImage ?? u.profile_image)} alt="" className="w-full h-full object-cover rounded-xl" />
                           : u.username?.slice(0, 2).toUpperCase()}
                       </div>
                       <div className="min-w-0">
