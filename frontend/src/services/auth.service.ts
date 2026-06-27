@@ -8,11 +8,8 @@ export const authService = {
   },
 
   signup: async (data: { username: string; email: string; password: string } | FormData) => {
-    const isFormData = data instanceof FormData;
-    const res = await api.post("/auth/register", data, {
-      headers: isFormData ? { "Content-Type": "multipart/form-data" } : {},
-    });
-    return res.data.data; // ← same here
+    const res = await api.post("/auth/register", data);
+    return res.data.data;
   },
 
   getMe: async () => {

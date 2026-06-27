@@ -10,10 +10,7 @@ export const profileService = {
     username?: string;
     profileImage?: string;
   } | FormData) => {
-    const isFormData = data instanceof FormData;
-    const res = await api.put("/profile/me", data, {
-      headers: isFormData ? { "Content-Type": "multipart/form-data" } : {},
-    });
+    const res = await api.put("/profile/me", data);
     return res.data.data;
   },
 

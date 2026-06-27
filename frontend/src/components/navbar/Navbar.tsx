@@ -49,7 +49,7 @@ const Navbar = () => {
 
   return (
     <>
-      <header className="bg-[#0a0a0a] border-b border-white/[0.08] h-14 sm:h-16 flex items-center px-4 sm:px-6 lg:px-8 sticky top-0 z-50">
+      <header className="bg-[#0a0a0a] border-b border-white/[0.08] h-14 sm:h-16 flex items-center px-4 sm:px-6 lg:px-8 sticky top-0 z-50 touch-manipulation">
         <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3">
 
           {/* Brand */}
