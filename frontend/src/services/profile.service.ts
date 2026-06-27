@@ -9,8 +9,11 @@ export const profileService = {
   updateMyProfile: async (data: {
     username?: string;
     profileImage?: string;
-  }) => {
-    const res = await api.put("/profile/me", data);
+  } | FormData) => {
+    const isFormData = data instanceof FormData;
+    const res = await api.put("/profile/me", data, {
+      headers: isFormData ? { "Content-Type": "multipart/form-data" } : {},
+    });
     return res.data.data;
   },
 

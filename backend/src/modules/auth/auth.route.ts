@@ -3,6 +3,7 @@ import { authController } from "./auth.controller";
 import { authenticateToken } from "../../shared/middlewares/auth.middleware";
 import { asyncHandler } from "../../shared/utils/asyncHandler";
 import { loginSchema, registerSchema, forgotPasswordSchema, verifyResetCodeSchema, resetPasswordSchema } from "./auth.schema";
+import { upload } from "../../middlewares/upload.middleware";
 
 const router = Router();
 
@@ -23,7 +24,14 @@ const validateBody =
     next();
   };
 
-router.post("/register", validateBody(registerSchema), asyncHandler(authController.register));
+const handleFileUpload = (req: any, res: any, next: any) => {
+  if (req.file) {
+    req.body.profileImage = `/api/uploads/${req.file.filename}`;
+  }
+  next();
+};
+
+router.post("/register", upload.single('profileImage'), handleFileUpload, validateBody(registerSchema), asyncHandler(authController.register));
 router.post("/login", validateBody(loginSchema), asyncHandler(authController.login));
 router.get("/me", authenticateToken, asyncHandler(authController.me));
 

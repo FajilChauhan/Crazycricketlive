@@ -1,9 +1,9 @@
-import { useState,useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   Mail, Trophy, Activity,
-  Target, Zap, Calendar, MapPin, Edit2, Check, X
+  Target, Zap, Calendar, MapPin, Edit2, Check, X, Camera
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -58,6 +58,9 @@ const EmptyState = ({ icon, text }: { icon: React.ReactNode; text: string }) => 
 const ProfilePage = () => {
   const [tab, setTab] = useState<Tab>("overview");
   const [editing, setEditing] = useState(false);
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const authUser = useAppSelector((s) => s.auth.user);
@@ -101,7 +104,11 @@ const ProfilePage = () => {
 
   const onEditSubmit = async (data: EditForm) => {
     try {
-      const updated = await profileService.updateMyProfile(data);
+      const payload = new FormData();
+      if (data.username) payload.append("username", data.username);
+      if (profileImage) payload.append("profileImage", profileImage);
+
+      const updated = await profileService.updateMyProfile(payload as any);
       dispatch(setUser({ ...authUser!, username: updated.username }));
       await refetchProfile();
       toast.success("Profile updated!");
@@ -121,12 +128,23 @@ const ProfilePage = () => {
   ];
 
   useEffect(() => {
-  if (profile?.username) {
-    reset({
-      username: profile.username,
-    });
-  }
-}, [profile, reset]);
+    if (profile?.username) {
+      reset({
+        username: profile.username,
+      });
+    }
+    if (profile?.profileImage) {
+      setPreviewUrl(profile.profileImage);
+    }
+  }, [profile, reset]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setProfileImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-[#111] px-4 py-8">
@@ -136,11 +154,23 @@ const ProfilePage = () => {
         <div className="bg-[#1a1a1a] border border-white/[0.07] rounded-2xl p-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 mx-auto sm:mx-0">
-                {profile?.profileImage
-                  ? <img src={profile.profileImage} alt="" className="w-full h-full object-cover rounded-2xl" />
-                  : initials}
+              <div 
+                className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 mx-auto sm:mx-0 overflow-hidden group"
+                onClick={() => editing && fileInputRef.current?.click()}
+                style={{ cursor: editing ? 'pointer' : 'default' }}
+              >
+                {previewUrl || profile?.profileImage ? (
+                  <img src={previewUrl || profile?.profileImage} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  initials
+                )}
+                {editing && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Camera size={16} className="text-white" />
+                  </div>
+                )}
               </div>
+              <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
               <div className="flex flex-col items-center sm:items-start">
                 {editing ? (
                   <form onSubmit={handleSubmit(onEditSubmit)} className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">

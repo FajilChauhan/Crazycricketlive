@@ -3,6 +3,7 @@ import { authenticateToken } from "../../shared/middlewares/auth.middleware";
 import { asyncHandler } from "../../shared/utils/asyncHandler";
 import { profileController } from "./profile.controller";
 import { updateProfileSchema } from "./profile.schema";
+import { upload } from "../../middlewares/upload.middleware";
 
 const router = Router();
 
@@ -21,6 +22,13 @@ const validateBody =
     next();
   };
 
+const handleFileUpload = (req: any, res: any, next: any) => {
+  if (req.file) {
+    req.body.profileImage = `/api/uploads/${req.file.filename}`;
+  }
+  next();
+};
+
 router.get(
   "/me",
   authenticateToken,
@@ -30,6 +38,8 @@ router.get(
 router.put(
   "/me",
   authenticateToken,
+  upload.single('profileImage'),
+  handleFileUpload,
   validateBody(updateProfileSchema),
   asyncHandler(profileController.updateMyProfile)
 );

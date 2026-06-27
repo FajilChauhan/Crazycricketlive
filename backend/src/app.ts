@@ -18,6 +18,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static images from external directory
+app.use("/api/uploads", express.static("C:\\Users\\fajil\\OneDrive\\Dokumen\\CrazyCricketLiveImages"));
+
 app.use("/api/auth", authRoutes);
 app.use("/api/tournaments", tournamentRoutes);
 app.use("/api/teams", teamRoutes);

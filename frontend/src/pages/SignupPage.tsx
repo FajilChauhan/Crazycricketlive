@@ -2,8 +2,8 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
-import { useState } from "react";
+import { Eye, EyeOff, Mail, Lock, User, Camera } from "lucide-react";
+import { useState, useRef } from "react";
 import toast from "react-hot-toast";
 
 import { signupSchema, SignupFormData } from "../features/auth/authSchemas";
@@ -15,6 +15,9 @@ const SignupPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
@@ -26,15 +29,26 @@ const SignupPage = () => {
     resolver: zodResolver(signupSchema),
   });
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setProfileImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
   const onSubmit = async (data: SignupFormData) => {
     try {
       setLoading(true);
-      const payload = {
-        username: data.username,
-        email: data.email,
-        password: data.password,
-      };
-      const res = await authService.signup(payload);
+      const payload = new FormData();
+      payload.append("username", data.username);
+      payload.append("email", data.email);
+      payload.append("password", data.password);
+      if (profileImage) {
+        payload.append("profileImage", profileImage);
+      }
+
+      const res = await authService.signup(payload as any);
       dispatch(setCredentials({ user: res.user, token: res.token }));
       toast.success(`Welcome, ${res.user.username}! 🏏`);
       navigate("/");
@@ -64,6 +78,34 @@ const SignupPage = () => {
 
         {/* Form Card */}
         <div className="bg-[#1a1a1a] border border-white/[0.07] rounded-2xl p-8">
+          
+          {/* Profile Image Upload */}
+          <div className="flex flex-col items-center mb-6">
+            <div 
+              className="relative w-24 h-24 rounded-full bg-[#111] border border-white/[0.08] flex items-center justify-center cursor-pointer overflow-hidden group"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {previewUrl ? (
+                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+              ) : (
+                <User size={32} className="text-white/20 group-hover:text-white/40 transition-colors" />
+              )}
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Camera size={20} className="text-white" />
+              </div>
+            </div>
+            <p className="text-white/40 text-xs mt-3 cursor-pointer hover:text-white/60 transition-colors" onClick={() => fileInputRef.current?.click()}>
+              Set Profile Image (Optional)
+            </p>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleImageChange} 
+              accept="image/*" 
+              className="hidden" 
+            />
+          </div>
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
 
             {/* Username */}
