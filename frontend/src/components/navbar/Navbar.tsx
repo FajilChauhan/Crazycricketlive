@@ -1,5 +1,5 @@
 // components/navbar/Navbar.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Trophy, PlusCircle, UserCircle, LogIn, UserPlus,
@@ -21,10 +21,12 @@ const Navbar = () => {
     dispatch(logout());
     toast.success("Logged out");
     navigate("/");
-    setMenuOpen(false);
   };
 
-  const close = () => setMenuOpen(false);
+  // Close mobile drawer on route changes
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + "/");
@@ -36,7 +38,7 @@ const Navbar = () => {
   }) => (
     <Link
       to={to}
-      onClick={() => { close(); onClick?.(); }}
+      onClick={onClick}
       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors
         ${isActive(to)
           ? "text-white bg-white/[0.08]"
@@ -53,7 +55,7 @@ const Navbar = () => {
         <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-3">
 
           {/* Brand */}
-          <Link to="/" onClick={close} className="flex items-center gap-2.5 flex-shrink-0">
+          <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
             <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-green-500 to-green-700 rounded-xl flex items-center justify-center text-base sm:text-lg flex-shrink-0">
               🏏
             </div>
@@ -77,7 +79,6 @@ const Navbar = () => {
               <>
                 <Link
                   to="/create"
-                  onClick={close}
                   className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white text-sm font-medium transition-colors ml-1"
                 >
                   <PlusCircle size={16} />
@@ -85,7 +86,6 @@ const Navbar = () => {
                 </Link>
                 <Link
                   to="/profile"
-                  onClick={close}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg text-white/50 hover:text-white/85 hover:bg-white/[0.06] text-sm font-medium transition-colors ml-1"
                 >
                   <UserCircle size={16} />
@@ -103,7 +103,6 @@ const Navbar = () => {
                 <NavLink to="/login" icon={<LogIn size={16} />} label="Login" />
                 <Link
                   to="/signup"
-                  onClick={close}
                   className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-white text-sm font-medium transition-colors ml-1"
                 >
                   <UserPlus size={16} />
@@ -117,7 +116,6 @@ const Navbar = () => {
           <div className="flex md:hidden items-center gap-1">
             <Link
               to="/search"
-              onClick={close}
               className="p-2 rounded-lg text-white/45 hover:text-white/80 hover:bg-white/[0.06] transition-colors"
             >
               <Search size={18} />
@@ -125,7 +123,6 @@ const Navbar = () => {
             {isAuthenticated && (
               <Link
                 to="/create"
-                onClick={close}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500 hover:bg-green-600 text-white text-sm font-medium transition-colors"
               >
                 <PlusCircle size={15} />
@@ -157,9 +154,8 @@ const Navbar = () => {
 
             <Link
               to="/tournaments"
-              onClick={close}
               className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors w-full
-                ${isActive("/tournaments") ? "text-white bg-white/[0.08]" : "text-white/55 hover:text-white/85 hover:bg-white/[0.05]"}`}
+                \${isActive("/tournaments") ? "text-white bg-white/[0.08]" : "text-white/55 hover:text-white/85 hover:bg-white/[0.05]"}`}
             >
               <Trophy size={17} className="flex-shrink-0" />
               Tournaments
@@ -169,9 +165,8 @@ const Navbar = () => {
               <>
                 <Link
                   to="/profile"
-                  onClick={close}
                   className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors w-full
-                    ${isActive("/profile") ? "text-white bg-white/[0.08]" : "text-white/55 hover:text-white/85 hover:bg-white/[0.05]"}`}
+                    \${isActive("/profile") ? "text-white bg-white/[0.08]" : "text-white/55 hover:text-white/85 hover:bg-white/[0.05]"}`}
                 >
                   <UserCircle size={17} className="flex-shrink-0" />
                   <span className="truncate">{user?.username}</span>
@@ -192,9 +187,8 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
-                  onClick={close}
                   className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors w-full
-                    ${isActive("/login") ? "text-white bg-white/[0.08]" : "text-white/55 hover:text-white/85 hover:bg-white/[0.05]"}`}
+                    \${isActive("/login") ? "text-white bg-white/[0.08]" : "text-white/55 hover:text-white/85 hover:bg-white/[0.05]"}`}
                 >
                   <LogIn size={17} className="flex-shrink-0" />
                   Login
