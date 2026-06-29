@@ -1,5 +1,5 @@
 // pages/PlayerProfilePage.tsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { matchService } from "../services/match.service";
 import { userService } from "../services/user.service";
+import { useAppSelector } from "../hooks/useAppSelector";
+import { getImageUrl } from "../utils/image";
 
 // ── Status Badge ──────────────────────────────────────────────────
 const StatusBadge = ({ status }: { status: string }) => {
@@ -47,6 +49,15 @@ const StatCard = ({
 const PlayerProfilePage = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const authUser = useAppSelector((s) => s.auth.user);
+  const [showImageModal, setShowImageModal] = useState(false);
+
+  // Redirect to own profile if viewing self
+  useEffect(() => {
+    if (userId && authUser?.userId && userId === authUser.userId) {
+      navigate("/profile", { replace: true });
+    }
+  }, [userId, authUser, navigate]);
 
   // Fetch user profile
   const { data: profile, isLoading: profileLoading } = useQuery({
@@ -137,10 +148,13 @@ const PlayerProfilePage = () => {
         <div className="bg-[#1a1a1a] border border-white/[0.07] rounded-2xl p-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-5">
             {/* Avatar */}
-            <div className="w-20 h-20 rounded-2xl flex-shrink-0 overflow-hidden mx-auto sm:mx-0">
+            <div 
+              className={`w-20 h-20 rounded-2xl flex-shrink-0 overflow-hidden mx-auto sm:mx-0 ${profile?.profile_image ? 'cursor-pointer hover:opacity-85 transition-opacity' : ''}`}
+              onClick={() => profile?.profile_image && setShowImageModal(true)}
+            >
               {profile?.profile_image ? (
                 <img
-                  src={profile.profile_image}
+                  src={getImageUrl(profile.profile_image)}
                   alt={displayName}
                   className="w-full h-full object-cover"
                 />
@@ -305,6 +319,32 @@ const PlayerProfilePage = () => {
         </div>
 
       </div>
+
+      {/* Rounded Profile Image Modal */}
+      {showImageModal && profile?.profile_image && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 cursor-pointer"
+          onClick={() => setShowImageModal(false)}
+        >
+          <div 
+            className="relative max-w-[280px] sm:max-w-[340px] w-full aspect-square rounded-full overflow-hidden border-2 border-white/20 bg-[#1a1a1a] shadow-2xl transition-all duration-300 transform scale-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img 
+              src={getImageUrl(profile.profile_image)} 
+              alt={displayName} 
+              className="w-full h-full object-cover"
+            />
+            <button 
+              onClick={() => setShowImageModal(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white text-sm transition-colors cursor-pointer border border-white/10"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
