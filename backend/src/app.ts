@@ -20,9 +20,15 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve static images from external directory
 import path from "path";
-const UPLOAD_DIR = process.env.NODE_ENV === 'production'
-  ? path.join(process.cwd(), 'uploads')
-  : "C:\\Users\\fajil\\OneDrive\\Dokumen\\CrazyCricketLiveImages";
+import fs from "fs";
+const UPLOAD_DIR = process.platform === 'win32'
+  ? "C:\\Users\\fajil\\OneDrive\\Dokumen\\CrazyCricketLiveImages"
+  : path.join(process.cwd(), 'uploads');
+
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
 app.use("/api/uploads", express.static(UPLOAD_DIR));
 
 app.use("/api/auth", authRoutes);

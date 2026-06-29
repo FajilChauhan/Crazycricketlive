@@ -4,9 +4,9 @@ import { UpdateProfileBody } from "./profile.types";
 import path from "path";
 import fs from "fs";
 
-const UPLOAD_DIR = process.env.NODE_ENV === 'production'
-  ? path.join(process.cwd(), 'uploads')
-  : "C:\\Users\\fajil\\OneDrive\\Dokumen\\CrazyCricketLiveImages";
+const UPLOAD_DIR = process.platform === 'win32'
+  ? "C:\\Users\\fajil\\OneDrive\\Dokumen\\CrazyCricketLiveImages"
+  : path.join(process.cwd(), 'uploads');
 
 type ProfileRow = {
   user_id: string;
