@@ -105,11 +105,7 @@ const ProfilePage = () => {
 
   const onEditSubmit = async (data: EditForm) => {
     try {
-      const payload = new FormData();
-      if (data.username) payload.append("username", data.username);
-      if (profileImage) payload.append("profileImage", profileImage);
-
-      const updated = await profileService.updateMyProfile(payload as any);
+      const updated = await profileService.updateMyProfile(data);
       dispatch(setUser({ ...authUser!, username: updated.username, profile_image: updated.profileImage }));
       await refetchProfile();
       toast.success("Profile updated!");
@@ -139,11 +135,28 @@ const ProfilePage = () => {
     }
   }, [profile, reset]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setProfileImage(file);
       setPreviewUrl(URL.createObjectURL(file));
+
+      const toastId = toast.loading("Uploading new profile photo...");
+      try {
+        const payload = new FormData();
+        payload.append("profileImage", file);
+        const updated = await profileService.updateMyProfile(payload as any);
+        dispatch(setUser({ ...authUser!, profile_image: updated.profileImage }));
+        await refetchProfile();
+        toast.success("Profile photo updated!", { id: toastId });
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || "Failed to update profile photo", { id: toastId });
+        if (profile?.profileImage) {
+          setPreviewUrl(profile.profileImage);
+        } else {
+          setPreviewUrl(null);
+        }
+      }
     }
   };
 
@@ -155,21 +168,29 @@ const ProfilePage = () => {
         <div className="bg-[#1a1a1a] border border-white/[0.07] rounded-2xl p-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-              <div 
-                className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 mx-auto sm:mx-0 overflow-hidden group"
-                onClick={() => editing && fileInputRef.current?.click()}
-                style={{ cursor: editing ? 'pointer' : 'default' }}
-              >
-                {previewUrl || profile?.profileImage ? (
-                  <img src={getImageUrl(previewUrl || profile?.profileImage)} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  initials
-                )}
-                {editing && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="relative flex-shrink-0 mx-auto sm:mx-0">
+                <div 
+                  className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-white text-xl font-bold overflow-hidden group cursor-pointer"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {previewUrl || profile?.profileImage ? (
+                    <img src={getImageUrl(previewUrl || profile?.profileImage)} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    initials
+                  )}
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Camera size={16} className="text-white" />
                   </div>
-                )}
+                </div>
+                
+                {/* Float Camera Edit Icon in Corner */}
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 hover:bg-green-600 rounded-lg flex items-center justify-center border border-[#1a1a1a] shadow-lg transition-colors cursor-pointer"
+                  title="Change profile photo"
+                >
+                  <Camera size={11} className="text-white" />
+                </button>
               </div>
               <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
               <div className="flex flex-col items-center sm:items-start">
