@@ -1,6 +1,12 @@
 import { pool } from "../../config/dbconfig";
 import { ApiError } from "../../shared/utils/ApiError";
 import { UpdateProfileBody } from "./profile.types";
+import path from "path";
+import fs from "fs";
+
+const UPLOAD_DIR = process.env.NODE_ENV === 'production'
+  ? path.join(process.cwd(), 'uploads')
+  : "C:\\Users\\fajil\\OneDrive\\Dokumen\\CrazyCricketLiveImages";
 
 type ProfileRow = {
   user_id: string;
@@ -55,6 +61,18 @@ export const profileService = {
     const username = body.username?.trim();
     const profileImage = body.profileImage ?? null;
 
+    let oldImageToDelete: string | null = null;
+    if (profileImage) {
+      const userResult = await pool.query<ProfileRow>(
+        `SELECT profile_image FROM users WHERE user_id = $1 LIMIT 1`,
+        [userId]
+      );
+      const oldImage = userResult.rows[0]?.profile_image;
+      if (oldImage && oldImage !== profileImage && oldImage.startsWith('/api/uploads/')) {
+        oldImageToDelete = oldImage;
+      }
+    }
+
     if (username) {
       const checkUsername = await pool.query(
         `SELECT user_id
@@ -83,6 +101,18 @@ export const profileService = {
 
       if (result.rows.length === 0) {
         throw new ApiError(404, "User not found");
+      }
+
+      if (oldImageToDelete) {
+        const filename = oldImageToDelete.replace('/api/uploads/', '');
+        const oldImagePath = path.join(UPLOAD_DIR, filename);
+        if (fs.existsSync(oldImagePath)) {
+          try {
+            fs.unlinkSync(oldImagePath);
+          } catch (err) {
+            console.error("Failed to delete old profile image:", err);
+          }
+        }
       }
 
       return mapProfile(result.rows[0]);

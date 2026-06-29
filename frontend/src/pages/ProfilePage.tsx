@@ -110,7 +110,7 @@ const ProfilePage = () => {
       if (profileImage) payload.append("profileImage", profileImage);
 
       const updated = await profileService.updateMyProfile(payload as any);
-      dispatch(setUser({ ...authUser!, username: updated.username }));
+      dispatch(setUser({ ...authUser!, username: updated.username, profile_image: updated.profileImage }));
       await refetchProfile();
       toast.success("Profile updated!");
       setEditing(false);
