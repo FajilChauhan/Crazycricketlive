@@ -1,30 +1,26 @@
-// middleware/upload.middleware.ts
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-const UPLOAD_DIR = process.platform === 'win32'
-  ? "C:\\Users\\fajil\\OneDrive\\Dokumen\\CrazyCricketLiveImages"
-  : path.join(process.cwd(), 'uploads');
+// ✅ HARDCODED — always use this exact path, no platform check needed
+const UPLOAD_DIR = "C:\\Users\\fajil\\OneDrive\\Dokumen\\CrazyCricketLiveImages";
 
-console.log("🔍 Platform:", process.platform);
-console.log("🔍 Upload directory resolved to:", UPLOAD_DIR);
-
+// Ensure the directory exists
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  console.log("📁 Created upload directory");
+  console.log("📁 Created upload directory:", UPLOAD_DIR);
 }
+
+console.log("🔍 Upload directory is set to:", UPLOAD_DIR);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    console.log("📥 Saving file to:", UPLOAD_DIR);
     cb(null, UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
     const finalName = file.fieldname + '-' + uniqueSuffix + ext;
-    console.log("📝 Generated filename:", finalName);
     cb(null, finalName);
   },
 });
@@ -43,6 +39,11 @@ const fileFilter = (
 
 export const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5 MB
+  },
   fileFilter: fileFilter,
 });
+
+// ✅ Export the path so other files (controller, static serving) use the SAME constant
+export const UPLOAD_DIRECTORY = UPLOAD_DIR;

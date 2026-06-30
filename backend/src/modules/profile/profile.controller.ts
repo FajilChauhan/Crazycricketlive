@@ -9,11 +9,23 @@ export const profileController = {
     return sendResponse(res, 200, "Profile fetched successfully", result);
   },
 
-  updateMyProfile: async (req: Request, res: Response) => {
-    const userId = (req as any).user?.userId;
-    const result = await profileService.updateMyProfile(userId, req.body);
-    return sendResponse(res, 200, "Profile updated successfully", result);
-  },
+  // profile.controller.ts — wherever you handle the upload response
+updateMyProfile: async (req: Request, res: Response) => {
+  const userId = (req as any).user?.userId;
+
+  let profileImage: string | undefined;
+  if (req.file) {
+    // ✅ This URL path is just for serving — actual file lives in UPLOAD_DIRECTORY
+    profileImage = `/api/uploads/${req.file.filename}`;
+  }
+
+  const result = await profileService.updateMyProfile(userId, {
+    username: req.body.username,
+    profileImage,
+  });
+
+  return sendResponse(res, 200, "Profile updated successfully", result);
+},
 
   getProfileById: async (req: Request, res: Response) => {
     const userId = req.params.userId as string;
