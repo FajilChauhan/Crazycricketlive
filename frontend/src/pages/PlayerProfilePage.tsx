@@ -149,12 +149,12 @@ const PlayerProfilePage = () => {
           <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-5">
             {/* Avatar */}
             <div 
-              className={`w-20 h-20 rounded-2xl flex-shrink-0 overflow-hidden mx-auto sm:mx-0 ${profile?.profile_image ? 'cursor-pointer hover:opacity-85 transition-opacity' : ''}`}
-              onClick={() => profile?.profile_image && setShowImageModal(true)}
+              className={`w-20 h-20 rounded-2xl flex-shrink-0 overflow-hidden mx-auto sm:mx-0 ${profile?.profileImage ? 'cursor-pointer hover:opacity-85 transition-opacity' : ''}`}
+              onClick={() => profile?.profileImage && setShowImageModal(true)}
             >
-              {profile?.profile_image ? (
+              {profile?.profileImage ? (
                 <img
-                  src={getImageUrl(profile.profile_image)}
+                  src={getImageUrl(profile.profileImage)}
                   alt={displayName}
                   className="w-full h-full object-cover"
                 />
@@ -321,7 +321,7 @@ const PlayerProfilePage = () => {
       </div>
 
       {/* Rounded Profile Image Modal */}
-      {showImageModal && profile?.profile_image && (
+      {showImageModal && profile?.profileImage && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 cursor-pointer"
           onClick={() => setShowImageModal(false)}
@@ -331,7 +331,7 @@ const PlayerProfilePage = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <img 
-              src={getImageUrl(profile.profile_image)} 
+              src={getImageUrl(profile.profileImage)} 
               alt={displayName} 
               className="w-full h-full object-cover"
             />

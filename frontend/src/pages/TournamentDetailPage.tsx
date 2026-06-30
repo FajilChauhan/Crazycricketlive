@@ -14,6 +14,7 @@ import { tournamentService } from "../services/tournament.service";
 import { teamService } from "../services/team.service";
 import { useAppSelector } from "../hooks/useAppSelector";
 import type { TournamentDetail, Team, Match } from "../features/tournament/tournament.types";
+import { getImageUrl } from "../utils/image";
 
 type Tab = "overview" | "matches" | "teams" | "points";
 
@@ -627,7 +628,7 @@ const TeamCard = ({
     <div className="bg-[#1f1f1f] border border-white/[0.07] rounded-xl px-4 py-4 flex items-center gap-3 hover:border-white/15 transition-all">
       <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.07] flex items-center justify-center flex-shrink-0">
         {t.team_logo ? (
-          <img src={t.team_logo} alt="" className="w-full h-full object-cover rounded-xl" />
+          <img src={getImageUrl(t.team_logo)} alt="" className="w-full h-full object-cover rounded-xl" />
         ) : (
           <Users size={16} className="text-white/25" />
         )}

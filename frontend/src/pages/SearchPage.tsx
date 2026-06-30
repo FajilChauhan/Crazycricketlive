@@ -212,7 +212,7 @@ const DashboardPage = () => {
                     >
                       <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.07] flex items-center justify-center text-[10px] font-bold text-white/40 flex-shrink-0">
                         {t.team_logo
-                          ? <img src={t.team_logo} alt="" className="w-full h-full object-cover rounded-xl" />
+                          ? <img src={getImageUrl(t.team_logo)} alt="" className="w-full h-full object-cover rounded-xl" />
                           : t.team_name?.slice(0, 2).toUpperCase()}
                       </div>
                       <div className="min-w-0">

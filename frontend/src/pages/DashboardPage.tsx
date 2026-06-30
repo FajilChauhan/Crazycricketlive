@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { dashboardService } from "../services/dashboard.service";
 import { useAppSelector } from "../hooks/useAppSelector";
+import { getImageUrl } from "../utils/image";
 
 // ── Helpers ───────────────────────────────────────────────────────
 const oversStr = (balls: number) =>
@@ -204,7 +205,7 @@ const PlayerCard = ({ player, rank }: { player: any; rank: number }) => {
         <div className="relative flex-shrink-0">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.03] border border-white/[0.08] flex items-center justify-center text-[11px] font-bold text-white/50">
             {player.profile_image
-              ? <img src={player.profile_image} alt="" className="w-full h-full object-cover rounded-xl" />
+              ? <img src={getImageUrl(player.profile_image)} alt="" className="w-full h-full object-cover rounded-xl" />
               : initials}
           </div>
           <span className={`absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black

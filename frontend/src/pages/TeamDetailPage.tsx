@@ -14,6 +14,7 @@ import { teamService } from "../services/team.service";
 import { teamMemberService } from "../services/teamMember.service";
 import { userService } from "../services/user.service";
 import { useAppSelector } from "../hooks/useAppSelector";
+import { getImageUrl } from "../utils/image";
 
 // ── Types ─────────────────────────────────────────────────────────
 interface Member {
@@ -370,7 +371,7 @@ const TeamDetailPage = () => {
               <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center flex-shrink-0 mx-auto sm:mx-0">
                 {team.team_logo ? (
                   <img
-                    src={team.team_logo}
+                    src={getImageUrl(team.team_logo)}
                     alt=""
                     className="w-full h-full object-cover rounded-2xl"
                   />
@@ -466,7 +467,7 @@ const TeamDetailPage = () => {
                       : "bg-white/[0.05] text-white/40 border border-white/[0.07]"}`}>
                     {m.profile_image ? (
                       <img
-                        src={m.profile_image}
+                        src={getImageUrl(m.profile_image)}
                         alt=""
                         className="w-full h-full object-cover rounded-xl"
                       />

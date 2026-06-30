@@ -17,6 +17,7 @@ import { teamMemberService } from "../services/teamMember.service";
 import { userService } from "../services/user.service";
 import { useAppSelector } from "../hooks/useAppSelector";
 import { useMatchSocket } from "../hooks/useMatchSocket";
+import { getImageUrl } from "../utils/image";
 
 type Tab = "summary" | "scorecard" | "history";
 
@@ -334,7 +335,7 @@ const PlayerRow = ({ player, onClick }: { player: any; onClick: () => void }) =>
     className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-white/[0.04] cursor-pointer transition-colors">
     <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/[0.07] flex items-center justify-center text-[10px] text-white/40 font-bold flex-shrink-0">
       {player.profile_image
-        ? <img src={player.profile_image} alt="" className="w-full h-full object-cover rounded-lg" />
+        ? <img src={getImageUrl(player.profile_image)} alt="" className="w-full h-full object-cover rounded-lg" />
         : (player.username ?? "?").slice(0, 2).toUpperCase()}
     </div>
     <div className="flex-1 min-w-0">
