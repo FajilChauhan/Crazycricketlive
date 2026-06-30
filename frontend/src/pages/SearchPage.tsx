@@ -187,10 +187,6 @@ const DashboardPage = () => {
                           <p className="text-white/35 text-xs">{t.organization_name}</p>
                         </div>
                       </div>
-                      <span className={`text-[10px] font-semibold uppercase border rounded px-2 py-0.5 flex-shrink-0
-                        ${t.status === "active" ? "bg-green-500/15 text-green-400 border-green-500/25" : "bg-white/5 text-white/30 border-white/10"}`}>
-                        {t.status}
-                      </span>
                     </div>
                   ))}
                 </div>
