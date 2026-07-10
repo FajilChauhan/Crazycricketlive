@@ -848,11 +848,12 @@ const MatchDetailPage = () => {
                             (s: number, b: any) => s + b.runs_scored + b.extra_runs, 0
                           );
                           const wickets = overBalls.filter((b: any) => b.is_wicket).length;
+                          const bowlerName = overBalls[0]?.bowler_name;
                           return (
                             <div key={overNum}>
                               <div className="flex items-center justify-between mb-2">
                                 <p className="text-white/40 text-xs font-semibold uppercase tracking-wider">
-                                  Over {Number(overNum)}
+                                  Over {Number(overNum)} {bowlerName && <span className="text-white/20 normal-case font-normal ml-1">by {bowlerName}</span>}
                                 </p>
                                 <div className="flex items-center gap-3">
                                   {wickets > 0 && (

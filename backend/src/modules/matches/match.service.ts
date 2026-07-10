@@ -744,10 +744,12 @@ export const matchService = {
 
   getBalls: async (matchId: string) => {
     const result = await pool.query(
-      `SELECT *
-       FROM ball_by_ball
-       WHERE match_id = $1
-       ORDER BY innings_id, over_number, ball_in_over, delivery_number`,
+      `SELECT b.*,
+              u.username AS bowler_name
+       FROM ball_by_ball b
+       LEFT JOIN users u ON b.bowler_id = u.user_id
+       WHERE b.match_id = $1
+       ORDER BY b.innings_id, b.over_number, b.ball_in_over, b.delivery_number`,
       [matchId]
     );
 
