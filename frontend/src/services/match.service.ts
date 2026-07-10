@@ -188,4 +188,9 @@ export const matchService = {
     const res = await api.delete(`/matches/${matchId}/scoring-state`);
     return res.data.data;
   },
+
+  getPredictions: async (matchId: string) => {
+    const res = await api.get(`/predictions/match/${matchId}`);
+    return res.data.data;
+  },
 };

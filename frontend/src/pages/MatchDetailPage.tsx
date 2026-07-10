@@ -19,7 +19,7 @@ import { useAppSelector } from "../hooks/useAppSelector";
 import { useMatchSocket } from "../hooks/useMatchSocket";
 import { getImageUrl } from "../utils/image";
 
-type Tab = "summary" | "scorecard" | "history";
+type Tab = "summary" | "scorecard" | "history" | "predictions";
 
 // ── helpers ───────────────────────────────────────────────────────
 const fmt = (d?: string) => {
@@ -521,6 +521,13 @@ const MatchDetailPage = () => {
     enabled: !!matchId && tab === "history",
   });
 
+  const { data: predictions, isLoading: predictionsLoading } = useQuery({
+    queryKey: ["predictions", matchId],
+    queryFn: () => matchService.getPredictions(matchId!),
+    enabled: !!matchId && (tab === "predictions" || (data?.match?.status === "live")),
+    refetchInterval: data?.match?.status === "live" ? 5000 : undefined,
+  });
+
   // ── Early returns AFTER all hooks ────────────────────────────
   if (isLoading) return <PageLoader />;
   if (error || !data) return <ErrorState />;
@@ -554,6 +561,10 @@ const MatchDetailPage = () => {
     { key: "scorecard",   label: "Scorecard",   icon: <TrendingUp size={14} /> },
     { key: "history",     label: "History",     icon: <History size={14} /> },
   ];
+
+  if (match && (match.status === "upcoming" || match.status === "live")) {
+    tabs.push({ key: "predictions", label: "AI Predictions", icon: <Star size={14} className="text-yellow-400 fill-yellow-400" /> });
+  }
 
   // Win margin helper
   const getWinMargin = () => {
@@ -863,6 +874,83 @@ const MatchDetailPage = () => {
                   );
                 });
               })()
+            )}
+          </div>
+        )}
+
+        {/* ── Predictions Tab ── */}
+        {tab === "predictions" && (
+          <div className="space-y-4">
+            {predictionsLoading ? (
+              <div className="py-12 text-center text-white/20 text-sm animate-pulse">Calculating predictions...</div>
+            ) : !predictions ? (
+              <div className="py-12 text-center text-white/20 text-sm">No predictions available</div>
+            ) : (
+              <div className="grid sm:grid-cols-2 gap-4">
+                {/* Win Probability Card */}
+                <div className="bg-[#1a1a1a] border border-white/[0.07] rounded-2xl p-5 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-white font-semibold text-sm mb-1">Win Probability</h3>
+                    <p className="text-white/35 text-xs mb-4">{predictions.winProbability.status}</p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {/* Prob Bar */}
+                    <div className="h-6 rounded-full bg-white/[0.05] overflow-hidden flex text-xs font-bold text-black border border-white/[0.05]">
+                      <div 
+                        style={{ width: `${predictions.winProbability.team1_prob}%` }}
+                        className="bg-blue-500 flex items-center justify-center text-white transition-all duration-500 animate-all"
+                      >
+                        {predictions.winProbability.team1_prob > 15 && `${predictions.winProbability.team1_prob}%`}
+                      </div>
+                      <div 
+                        style={{ width: `${predictions.winProbability.team2_prob}%` }}
+                        className="bg-orange-500 flex items-center justify-center text-white transition-all duration-500 animate-all"
+                      >
+                        {predictions.winProbability.team2_prob > 15 && `${predictions.winProbability.team2_prob}%`}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-blue-400 font-semibold">{predictions.winProbability.team1}</span>
+                      <span className="text-orange-400 font-semibold">{predictions.winProbability.team2}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Score Projection Card */}
+                <div className="bg-[#1a1a1a] border border-white/[0.07] rounded-2xl p-5">
+                  <h3 className="text-white font-semibold text-sm mb-4">Projected Score</h3>
+                  {predictions.scorePrediction ? (
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-end border-b border-white/[0.05] pb-3">
+                        <span className="text-white/40 text-xs">Projected Range</span>
+                        <span className="text-green-400 text-2xl font-bold tracking-tight">{predictions.scorePrediction.projected}</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 pt-2 text-center text-xs">
+                        <div className="bg-white/[0.03] rounded-xl p-2.5">
+                          <p className="text-white/30 mb-0.5">Worst Case</p>
+                          <p className="text-white font-bold text-base">{predictions.scorePrediction.low}</p>
+                        </div>
+                        <div className="bg-white/[0.05] rounded-xl p-2.5 border border-white/[0.05]">
+                          <p className="text-white/35 mb-0.5">Most Likely</p>
+                          <p className="text-white font-bold text-base">{predictions.scorePrediction.mid}</p>
+                        </div>
+                        <div className="bg-white/[0.03] rounded-xl p-2.5">
+                          <p className="text-white/30 mb-0.5">Best Case</p>
+                          <p className="text-white font-bold text-base">{predictions.scorePrediction.high}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center text-white/20 text-xs">
+                      {match.status === "upcoming" 
+                        ? "Score projections will start once the match goes live" 
+                        : "Score projections require active play data"}
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         )}

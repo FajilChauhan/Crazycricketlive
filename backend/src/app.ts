@@ -10,6 +10,7 @@ import dashboardRoutes from "./modules/dashboard/dashboard.route";
 import profileRoutes from "./modules/profile/profile.route";
 import searchRoutes from "./modules/search/search.route";
 import userRoutes from "./modules/users/user.route";
+import predictionRoutes from "./modules/predictions/prediction.route";
 import { errorHandler } from "./shared/middlewares/error.middleware";
 
 const app = express();
@@ -40,6 +41,7 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/search", searchRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/predictions", predictionRoutes);
 
 app.get("/", (req, res) => {
   res.send("Cricket Live API is running");
