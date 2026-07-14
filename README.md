@@ -7,7 +7,7 @@ CrazyCricketLive allows organizers to create tournaments, manage teams, add play
 ---
 🚀 Live Demo
 
-👉 https://crazycricketlive.vercel.app/
+👉 https://crazycricketlive-q4jb.vercel.app/
 
 📦 Repository
 
